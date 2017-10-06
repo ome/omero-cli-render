@@ -57,6 +57,7 @@ setup(
     author_email='ome-devel@lists.openmicroscopy.org.uk',
     license='GPL-2.0+',
     url='%s' % url,
+    zip_safe=False,
     download_url='%s/v%s.tar.gz' % (url, version),
     keywords=['OMERO.CLI', 'plugin'],
 )
