@@ -1,0 +1,24 @@
+language: python
+
+virtualenv:
+  system_site_packages: true
+
+# This (sudo: false) is needed to "run on container-based infrastructure" on
+# which cache: is available
+# http://docs.travis-ci.com/user/workers/container-based-infrastructure/
+sudo: required
+
+before_install:
+  - pip install restructuredtext_lint
+  - pip install flake8 pycodestyle pep8-naming
+  #- flake8 .
+  - rst-lint README.rst
+  - export PATH=/usr/bin/:$PATH
+  - sudo apt-get install -y zeroc-ice35
+  - pip install --upgrade pip setuptools
+
+script:
+  # The installation is run in the virtual env
+  # Required to explicitly activate it
+  - source $HOME/virtualenv/python2.7_with_system_site_packages/bin/activate
+  - ./travis-build

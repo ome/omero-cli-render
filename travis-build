@@ -1,0 +1,13 @@
+#! /bin/bash
+
+set -e
+set -u
+set -x
+
+python setup.py sdist
+pip install dist/*.tar.gz
+pip install omego
+omego download python --ice 3.5 --release 5.4.0-m4 --sym=auto
+
+# Check the installation
+OMERO.py/bin/omero render -h
