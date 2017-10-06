@@ -132,43 +132,43 @@ class TestRender(CLITest):
     # rendering tests
     # ========================================================================
 
-    @pytest.mark.parametrize('targetName', sorted(SUPPORTED.keys()))
-    def testNonExistingImage(self, targetName, tmpdir):
-        target = SUPPORTED[targetName]
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    def test_non_existing_image(self, target_name, tmpdir):
+        target = SUPPORTED[target_name]
         self.args += ["info", target]
         with pytest.raises(NonZeroReturnCode):
             self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('targetName', sorted(SUPPORTED.keys()))
-    def testInfo(self, targetName, tmpdir):
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    def test_info(self, target_name, tmpdir):
         self.create_image()
-        target = getattr(self, targetName)
+        target = getattr(self, target_name)
         self.args += ["info", target]
         self.cli.invoke(self.args, strict=True)
 
     @pytest.mark.parametrize('style', ['json', 'yaml'])
-    def testInfoStyle(self, style):
+    def test_info_style(self, style):
         self.create_image()
         target = self.imageid
         self.args += ["info", target]
         self.args += ['--style', style]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('targetName', sorted(SUPPORTED.keys()))
-    def testCopy(self, targetName, tmpdir):
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    def test_copy(self, target_name, tmpdir):
         self.create_image()
-        target = getattr(self, targetName)
+        target = getattr(self, target_name)
         self.args += ["copy", self.source, target]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('targetName', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     @pytest.mark.broken(
         reason=('https://trello.com/c/lyyGuRow/'
                 '657-incorrect-logical-channels-in-clitest-importplates'))
     @pytest.mark.xfail(
         reason=('https://trello.com/c/lyyGuRow/'
                 '657-incorrect-logical-channels-in-clitest-importplates'))
-    def testEdit(self, targetName, tmpdir):
+    def test_edit(self, target_name, tmpdir):
         sizec = 4
         greyscale = None
         # 4 channels so should default to colour model
@@ -178,7 +178,7 @@ class TestRender(CLITest):
         rdfile = tmpdir.join('render-test-edit.json')
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
-        target = getattr(self, targetName)
+        target = getattr(self, target_name)
         self.args += ["edit", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
 
@@ -198,9 +198,9 @@ class TestRender(CLITest):
 
     # Once testEdit is no longer broken testEditSingleC could be merged into
     # it with sizec and greyscale parameters
-    @pytest.mark.parametrize('targetName', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     @pytest.mark.parametrize('greyscale', [None, True, False])
-    def testEditSingleC(self, targetName, greyscale, tmpdir):
+    def test_edit_single_channel(self, target_name, greyscale, tmpdir):
         sizec = 1
         # 1 channel so should default to greyscale model
         expected_greyscale = ((greyscale is None) or greyscale)
@@ -209,7 +209,7 @@ class TestRender(CLITest):
         rdfile = tmpdir.join('render-test-editsinglec.json')
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
-        target = getattr(self, targetName)
+        target = getattr(self, target_name)
         self.args += ["edit", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
 

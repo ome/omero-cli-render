@@ -187,8 +187,8 @@ class RenderObject(object):
         self.image = image
         self.name = image.name or ''
         self.type = image.getPixelsType()
-        reOK = image._prepareRenderingEngine()
-        if not reOK:
+        re_ok = image._prepareRenderingEngine()
+        if not re_ok:
             raise Exception(
                 "Failed to prepare Rendering Engine for %s" % image)
 
