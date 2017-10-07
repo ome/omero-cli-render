@@ -210,7 +210,6 @@ class RenderObject(object):
         self.projection = image.getProjection()
         self.defaultZ = image._re.getDefaultZ()
         self.defaultT = image._re.getDefaultT()
-        self.invertAxis = image.isInvertedAxis()
 
     def __str__(self):
         sb = "rdefv1: model=%s, z=%s, t=%s\n" % (
@@ -241,7 +240,6 @@ class RenderObject(object):
         # self.range
         # self.model
         # self.projection
-        # self.invertAxis
         return d
 
     def close(self):
