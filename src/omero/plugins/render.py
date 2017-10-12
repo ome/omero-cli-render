@@ -243,7 +243,8 @@ class RenderObject(object):
         return d
 
     def close(self):
-        self.image._closeRE()
+        print 'not yet implemented'
+        # self.image._closeRE()
 
 
 class RenderControl(BaseControl):
@@ -351,50 +352,50 @@ class RenderControl(BaseControl):
                     first = False
             finally:
                 ro.close()
-        gateway._assert_unregistered("info")
+        # gateway._assert_unregistered("info")
 
     def copy(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
         self._copy(gateway, args.object, args.target, args.skipthumbs)
-        gateway._assert_unregistered("copy")
+        # gateway._assert_unregistered("copy")
 
     def _copy(self, gateway, obj, target, skipthumbs, close=True):
         """
             close - whether or not to close the source image
         """
         for src_img in self.render_images(gateway, obj, batch=1):
-            try:
-                self._copy_single(gateway, src_img, target, skipthumbs)
-            finally:
-                if close:
-                    src_img._closeRE()
+            # try:
+            self._copy_single(gateway, src_img, target, skipthumbs)
+            # finally:
+            # if close:
+            # src_img._closeRE()
 
     def _copy_single(self, gateway, src_img, target, skipthumbs):
         for targets in self.render_images(gateway, target):
-            try:
-                batch = dict()
-                for target in targets:
-                    if target.id == src_img.id:
-                        self.ctx.err(
-                            "Skipping: Image:%s itself" % target.id)
-                    else:
-                        batch[target.id] = target
+            # try:
+            batch = dict()
+            for target in targets:
+                if target.id == src_img.id:
+                    self.ctx.err(
+                        "Skipping: Image:%s itself" % target.id)
+                else:
+                    batch[target.id] = target
 
-                if not batch:
-                    continue
+            if not batch:
+                continue
 
-                rv = gateway.applySettingsToSet(src_img.id, "Image",
-                                                batch.keys())
-                for missing in rv[False]:
-                    self.ctx.err("Error: Image:%s" % missing)
-                    del batch[missing]
+            rv = gateway.applySettingsToSet(src_img.id, "Image",
+                                            batch.keys())
+            for missing in rv[False]:
+                self.ctx.err("Error: Image:%s" % missing)
+                del batch[missing]
 
-                if not skipthumbs:
-                    self._generate_thumbs(batch.values())
-            finally:
-                for target in targets:
-                    target._closeRE()
+            if not skipthumbs:
+                self._generate_thumbs(batch.values())
+            # finally:
+            # for target in targets:
+            # target._closeRE()
 
     def update_channel_names(self, gateway, obj, namedict):
         for targets in self.render_images(gateway, obj):
@@ -464,46 +465,46 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.render_images(gateway, args.object, batch=1):
             iids.append(img.id)
-            try:
-                img.setActiveChannels(
-                    cindices, windows=rangelist, colors=colourlist, noRE=True)
-                if greyscale is not None:
-                    if greyscale:
-                        img.setGreyscaleRenderingModel()
-                    else:
-                        img.setColorRenderingModel()
+            # try:
+            img.setActiveChannels(
+                cindices, windows=rangelist, colors=colourlist, noRE=True)
+            if greyscale is not None:
+                if greyscale:
+                    img.setGreyscaleRenderingModel()
+                else:
+                    img.setColorRenderingModel()
 
-                img.saveDefaults()
-                self.ctx.dbg(
-                    "Updated rendering settings for Image:%s" % img.id)
-                if not args.skipthumbs:
-                    self._generate_thumbs([img])
+            img.saveDefaults()
+            self.ctx.dbg(
+                "Updated rendering settings for Image:%s" % img.id)
+            if not args.skipthumbs:
+                self._generate_thumbs([img])
 
-                if args.copy:
-                    # Edit first image only, copy to rest
-                    # Don't close source image until outer
-                    # loop is done.
-                    self._copy_single(gateway,
-                                      img, args.object,
-                                      args.skipthumbs)
-                    break
-            finally:
-                img._closeRE()
+            if args.copy:
+                # Edit first image only, copy to rest
+                # Don't close source image until outer
+                # loop is done.
+                self._copy_single(gateway,
+                                  img, args.object,
+                                  args.skipthumbs)
+                break
+            # finally:
+            # img._closeRE()
 
         if namedict:
             self._update_channel_names(gateway, iids, namedict)
 
-        gateway._assert_unregistered("edit")
+        # gateway._assert_unregistered("edit")
 
     def test(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
         for img in self.render_images(gateway, args.object, batch=1):
-            try:
-                self.test_per_pixel(
-                    client, img.getPrimaryPixels().id, args.force, args.thumb)
-            finally:
-                img._closeRE()
+            # try:
+            self.test_per_pixel(
+                client, img.getPrimaryPixels().id, args.force, args.thumb)
+            # finally:
+            # img._closeRE()
 
     def test_per_pixel(self, client, pixid, force, thumb):
         fail = {"omero.pixeldata.fail_if_missing": "true"}
