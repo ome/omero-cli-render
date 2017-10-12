@@ -1,4 +1,6 @@
 build
 dist
 omero-cli-render-*
-src/omero_cli_render.egg-info
+*.egg*
+.cache
+*.DS_Store
