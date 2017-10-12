@@ -467,7 +467,7 @@ class RenderControl(BaseControl):
             iids.append(img.id)
             # try:
             img.setActiveChannels(
-                cindices, windows=rangelist, colors=colourlist, noRE=True)
+                cindices, windows=rangelist, colors=colourlist)
             if greyscale is not None:
                 if greyscale:
                     img.setGreyscaleRenderingModel()
