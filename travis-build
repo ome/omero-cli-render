@@ -7,7 +7,20 @@ set -x
 python setup.py sdist
 pip install dist/*.tar.gz
 pip install omego
-omego download python --ice 3.5 --release 5.4.0-m4 --sym=auto
 
-# Check the installation
-OMERO.py/bin/omero render -h
+# to avoid error message
+pip install "numpy>=1.9"
+pip install "Pillow<3.4"
+
+# Install the server
+omego install --managedb --dbhost localhost --dbname omero --prestartfile $HOME/config.omero -v --release 5.4.0 --ice 3.5 --no-web
+
+# Check that the plugin is installed
+OMERO.server/bin/omero render -h;
+
+
+# run the test
+cp src/omero/plugins/render.py OMERO.server/lib/python/omero/plugins/render.py
+VALUE=$(readlink -f OMERO.server)
+export PYTHONPATH=$VALUE/lib/python:$VALUE/lib/testlib
+python setup.py test -t test/integration/clitest -i $VALUE/etc/ice.config -v
