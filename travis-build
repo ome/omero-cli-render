@@ -22,5 +22,5 @@ OMERO.server/bin/omero render -h;
 # run the test
 cp src/omero/plugins/render.py OMERO.server/lib/python/omero/plugins/render.py
 VALUE=$(readlink -f OMERO.server)
-export PYTHONPATH=$VALUE/lib/python:$VALUE/lib/testlib
+export PYTHONPATH=$VALUE/lib/python
 python setup.py test -t test/integration/clitest -i $VALUE/etc/ice.config -v
