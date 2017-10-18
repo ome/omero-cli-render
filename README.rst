@@ -5,7 +5,7 @@
     :target: https://badge.fury.io/py/omero-cli-render
 
 omero-cli-render
-===================
+================
 
 Plugin for use in the OMERO CLI.
 
