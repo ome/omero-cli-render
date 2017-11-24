@@ -4,3 +4,6 @@ omero-cli-render-*
 *.egg*
 .cache
 *.DS_Store
+.*un~
+*.pyc
+.omero

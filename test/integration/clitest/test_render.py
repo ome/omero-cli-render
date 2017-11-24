@@ -22,7 +22,7 @@
 import json
 import pytest
 
-from omero.plugins.render import RenderControl
+from omero_cli_render import RenderControl
 from omero.cli import NonZeroReturnCode
 from cli import CLITest
 from omero.gateway import BlitzGateway

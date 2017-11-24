@@ -96,7 +96,7 @@ url = "https://github.com/ome/omero-cli-render/"
 
 setup(
     version=version,
-    packages=['omero.plugins'],
+    packages=['', 'omero.plugins'],
     package_dir={"": "src"},
     name='omero-cli-render',
     description="Plugin for use in the OMERO CLI.",
