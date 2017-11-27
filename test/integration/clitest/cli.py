@@ -74,7 +74,7 @@ class CLITest(AbstractCLITest):
         return new_object.id.val
 
     @pytest.fixture()
-    def simpleHierarchy(self):
+    def simple_hierarchy(self):
         proj = self.make_project()
         dset = self.make_dataset()
         img = self.update.saveAndReturnObject(self.new_image())
