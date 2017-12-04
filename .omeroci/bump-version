@@ -1,0 +1,22 @@
+#!/usr/bin/python
+
+from argparse import ArgumentParser
+from fileinput import input
+from os.path import dirname
+from os.path import join
+from os.path import pardir
+from re import compile
+
+setup_file = join(dirname(__file__), pardir, "setup.py")
+setup_re = compile("^(version\s=\s')\S+(')$")
+
+def replace_version(file, re, version):
+    for line in input([file], inplace=1):
+        replacement = r"\g<1>%s\g<2>" % version
+        print re.sub(replacement, line),
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("version")
+    args = parser.parse_args()
+    replace_version(setup_file, setup_re, args.version)
