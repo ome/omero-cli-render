@@ -211,7 +211,7 @@ class RenderObject(object):
 
         self.range = image.getPixelRange()
         self.channels = map(lambda x: ChannelObject(x),
-                            image.getChannels(noRE=True))
+                            image.getChannels(noRE=False))
         self.model = image.isGreyscaleRenderingModel() and \
             'greyscale' or 'color'
         self.projection = image.getProjection()
