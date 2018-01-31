@@ -31,6 +31,7 @@ from omero.model import Screen
 from omero.rtypes import rint
 from omero.util import pydict_text_io
 
+from omero import UnloadedEntityException
 
 DESC = {
     "COPY": "Copy rendering setting to multiple objects",
@@ -114,10 +115,16 @@ class ChannelObject(object):
         self.emWave = channel.getEmissionWave()
         self.label = channel.getLabel()
         self.color = channel.getColor()
-        self.min = channel.getWindowMin()
-        self.max = channel.getWindowMax()
-        self.start = channel.getWindowStart()
-        self.end = channel.getWindowEnd()
+        try:
+            self.min = channel.getWindowMin()
+            self.max = channel.getWindowMax()
+            self.start = channel.getWindowStart()
+            self.end = channel.getWindowEnd()
+        except UnloadedEntityException:
+            self.min = None
+            self.max = None
+            self.start = None
+            self.end = None
         self.active = channel.isActive()
 
     def init_from_dict(self, d):
