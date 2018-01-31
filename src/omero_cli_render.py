@@ -33,6 +33,8 @@ from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
 
+from omero_ext.argparse import SUPPRESS
+
 DESC = {
     "COPY": "Copy rendering setting to multiple objects",
     "INFO": "Show details of a rendering setting",
@@ -262,6 +264,7 @@ class RenderControl(BaseControl):
         info = parser.add(sub, self.info, DESC["INFO"])
         copy = parser.add(sub, self.copy, DESC["COPY"])
         set = parser.add(sub, self.set, DESC["SET"])
+        edit = parser.add(sub, self.edit, help=SUPPRESS)
         test = parser.add(sub, self.test, DESC["TEST"])
         # list = parser.add(sub, self.list, DESC["LIST"])
         # jpeg = parser.add(sub, self.jpeg, DESC["JPEG"])
@@ -273,14 +276,18 @@ class RenderControl(BaseControl):
         render_help = ("rendering def source of form <object>:<id>. "
                        "Image is assumed if <object>: is omitted.")
 
-        for x in (info, copy, set, test):
+        for x in (info, copy, set, edit, test):
             x.add_argument("object", type=render_type, help=render_help)
 
         set.add_argument(
             "--copy", help="Batch edit images by copying rendering settings",
             action="store_true")
 
-        for x in (copy, set):
+        edit.add_argument(
+            "--copy", help="Batch edit images by copying rendering settings",
+            action="store_true")
+
+        for x in (copy, set, edit):
             x.add_argument(
                 "--skipthumbs", help="Don't re-generate thumbnails",
                 action="store_true")
@@ -294,6 +301,9 @@ class RenderControl(BaseControl):
         copy.add_argument("target", type=render_type, help=render_help,
                           nargs="+")
         set.add_argument(
+            "channels",
+            help="Rendering definition, local file or OriginalFile:ID")
+        edit.add_argument(
             "channels",
             help="Rendering definition, local file or OriginalFile:ID")
 
@@ -502,6 +512,10 @@ class RenderControl(BaseControl):
             self._update_channel_names(gateway, iids, namedict)
 
         # gateway._assert_unregistered("edit")
+
+    def edit(self, args):
+        self.ctx.err("Warning: 'edit' command is deprecated (renamed to 'set')")
+        self.set(args)
 
     def test(self, args):
         client = self.ctx.conn(args)
