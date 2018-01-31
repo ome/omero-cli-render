@@ -36,7 +36,7 @@ from omero import UnloadedEntityException
 DESC = {
     "COPY": "Copy rendering setting to multiple objects",
     "INFO": "Show details of a rendering setting",
-    "EDIT": "Edit a rendering setting",
+    "SET": "Set a rendering setting",
     "LIST": "List available rendering settings",
     "JPEG": "Render as JPEG",
     "TEST": "Test that underlying pixel data is available",
@@ -50,8 +50,8 @@ Examples:
     bin/omero render info RenderingDef:1
     bin/omero render info Image:123
 
-    # %(EDIT)s
-    bin/omero render edit Image:1 <YAML or JSON file>
+    # %(SET)s
+    bin/omero render set Image:1 <YAML or JSON file>
     where the input file contains a top-level channels key (required), and
     an optional top-level greyscale key (True: greyscale, False: colour).
     Channel elements are index:dictionaries of the form:
@@ -69,13 +69,13 @@ Examples:
 
     # Omitted fields will keep their current values, omitted channel-indices
     # will be turned off.
-    bin/omero render edit --copy Screen:1 <YAML or JSON file>
-    # Optimised for bulk-rendering, edits the first image and copies the
+    bin/omero render set --copy Screen:1 <YAML or JSON file>
+    # Optimised for bulk-rendering, sets the first image and copies the
     # rendering settings to the rest. Note using this flag may have different
     # results from not using it if the images had different settings to begin
     # with and you are only overridding a subset of the settings (all images
     # will end up with the same full rendering settings)
-    bin/omero render edit --skipthumbs ...
+    bin/omero render set --skipthumbs ...
     # Update rendering settings but don't regenerate thumbnails
 
     # %(LIST)s
@@ -163,7 +163,7 @@ class ChannelObject(object):
 
     def to_dict(self):
         """
-        Return a dict of fields that are recognised by `render edit`
+        Return a dict of fields that are recognised by `render set`
         """
         try:
             color = self.color.getHtml()
@@ -233,7 +233,7 @@ class RenderObject(object):
 
     def to_dict(self):
         """
-        Return a dict of fields that are recognised by `render edit`
+        Return a dict of fields that are recognised by `render set`
         """
         d = {}
         chs = {}
@@ -266,7 +266,7 @@ class RenderControl(BaseControl):
         sub = parser.sub()
         info = parser.add(sub, self.info, DESC["INFO"])
         copy = parser.add(sub, self.copy, DESC["COPY"])
-        edit = parser.add(sub, self.edit, DESC["EDIT"])
+        set = parser.add(sub, self.set, DESC["SET"])
         test = parser.add(sub, self.test, DESC["TEST"])
         # list = parser.add(sub, self.list, DESC["LIST"])
         # jpeg = parser.add(sub, self.jpeg, DESC["JPEG"])
@@ -278,14 +278,14 @@ class RenderControl(BaseControl):
         render_help = ("rendering def source of form <object>:<id>. "
                        "Image is assumed if <object>: is omitted.")
 
-        for x in (info, copy, edit, test):
+        for x in (info, copy, set, test):
             x.add_argument("object", type=render_type, help=render_help)
 
-        edit.add_argument(
+        set.add_argument(
             "--copy", help="Batch edit images by copying rendering settings",
             action="store_true")
 
-        for x in (copy, edit):
+        for x in (copy, set):
             x.add_argument(
                 "--skipthumbs", help="Don't re-generate thumbnails",
                 action="store_true")
@@ -298,7 +298,7 @@ class RenderControl(BaseControl):
 
         copy.add_argument("target", type=render_type, help=render_help,
                           nargs="+")
-        edit.add_argument(
+        set.add_argument(
             "channels",
             help="Rendering definition, local file or OriginalFile:ID")
 
@@ -435,7 +435,7 @@ class RenderControl(BaseControl):
             self.ctx.dbg("Image:%s got thumbnail in %2.2fs" % (
                 img.id, stop - start))
 
-    def edit(self, args):
+    def set(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
         newchannels = {}
