@@ -66,9 +66,7 @@ class TestRender(CLITest):
                     img = w.getImage(index=i)
                     img.getThumbnail(
                         size=(96,), direct=False)
-                    # img._closeRE()
-        # self.imgobj._closeRE()
-        # assert not self.gw._assert_unregistered("create_image")
+        assert not self.gw._assert_unregistered("create_image")
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
@@ -194,8 +192,7 @@ class TestRender(CLITest):
             for c in xrange(len(channels)):
                 self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
             self.assert_image_rmodel(img, expected_greyscale)
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testSet")
+        assert not gw._assert_unregistered("testSet")
 
     # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
