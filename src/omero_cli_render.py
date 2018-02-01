@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2015-2016 University of Dundee & Open Microscopy Environment.
+# Copyright (C) 2015-2018 University of Dundee & Open Microscopy Environment.
 # All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -33,15 +33,12 @@ from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
 
-from omero_ext.argparse import SUPPRESS
-
 DESC = {
     "COPY": "Copy rendering setting to multiple objects",
     "INFO": "Show details of a rendering setting",
     "SET": "Set a rendering setting",
-    "LIST": "List available rendering settings",
-    "JPEG": "Render as JPEG",
-    "TEST": "Test that underlying pixel data is available",
+    "EDIT": "Deprecated, please use 'set' instead",
+    "TEST": "Test that underlying pixel data is available"
 }
 
 HELP = """Tools for working with rendering settings
@@ -54,9 +51,9 @@ Examples:
 
     # %(SET)s
     bin/omero render set Image:1 <YAML or JSON file>
-    where the input file contains a top-level channels key (required), and
-    an optional top-level greyscale key (True: greyscale, False: colour).
-    Channel elements are index:dictionaries of the form:
+    # where the input file contains a top-level channels key (required), and
+    # an optional top-level greyscale key (True: greyscale, False: colour).
+    # Channel elements are index:dictionaries of the form:
 
     channels:
       <index>: (Channel-index, int, 1-based)
@@ -71,17 +68,17 @@ Examples:
 
     # Omitted fields will keep their current values, omitted channel-indices
     # will be turned off.
-    bin/omero render set --copy Screen:1 <YAML or JSON file>
-    # Optimised for bulk-rendering, sets the first image and copies the
-    # rendering settings to the rest. Note using this flag may have different
-    # results from not using it if the images had different settings to begin
-    # with and you are only overridding a subset of the settings (all images
-    # will end up with the same full rendering settings)
-    bin/omero render set --skipthumbs ...
-    # Update rendering settings but don't regenerate thumbnails
 
-    # %(LIST)s
-    bin/omero render list Image:456
+    bin/omero render set --copy Screen:1 <YAML or JSON file>
+    # Equivalent to calling set for a single image followed by calling copy
+    # for all the remaining images in the collection, using the first image
+    # as the source. Note using this flag may have different results from not
+    # using it if the images had different settings to begin with and you are
+    # only overridding a subset of the settings (all images will end up with
+    # the same full rendering settings).
+
+    bin/omero render set --skipthumbs ...
+    # Update rendering settings but don't regenerate thumbnails.
 
     # %(COPY)s
     bin/omero render copy RenderingDef:1 Image:123
@@ -90,18 +87,6 @@ Examples:
     bin/omero render copy Image:456: Plate:1
     bin/omero render copy Image:456: Screen:2
     bin/omero render copy Image:456: Dataset:3
-
-    # %(JPEG)s
-    bin/omero render jpeg Image:5 > test.jpg
-
-    # ...optionally setting parameters
-    bin/omero render jpeg --z=4 Image:6 > test.jpg
-
-    # %(TEST)s
-    bin/omero render test Image:7
-    bin/omero render test --thumb Image:7
-    bin/omero render test --force Image:7
-
 """ % DESC
 
 
@@ -183,7 +168,6 @@ class ChannelObject(object):
         _set_if_not_none(d, 'start', self.start)
         _set_if_not_none(d, 'end', self.end)
         _set_if_not_none(d, 'active', self.active)
-        # self.emWave
         return d
 
 
@@ -243,22 +227,7 @@ class RenderObject(object):
             chs[idx] = ch.to_dict()
         d['channels'] = chs
         d['greyscale'] = True if self.model == 'greyscale' else False
-        # self.image
-        # self.name
-        # self.type
-        # self.tiles
-        # self.width
-        # self.height
-        # self.levels
-        # self.zoomLevelScaling
-        # self.range
-        # self.model
-        # self.projection
         return d
-
-    def close(self):
-        print 'not yet implemented'
-        # self.image._closeRE()
 
 
 class RenderControl(BaseControl):
@@ -269,13 +238,8 @@ class RenderControl(BaseControl):
         info = parser.add(sub, self.info, DESC["INFO"])
         copy = parser.add(sub, self.copy, DESC["COPY"])
         set = parser.add(sub, self.set, DESC["SET"])
-        edit = parser.add(sub, self.edit, help=SUPPRESS)
+        edit = parser.add(sub, self.edit, DESC["EDIT"])
         test = parser.add(sub, self.test, DESC["TEST"])
-        # list = parser.add(sub, self.list, DESC["LIST"])
-        # jpeg = parser.add(sub, self.jpeg, DESC["JPEG"])
-        # jpeg.add_argument(
-        #    "--out", default="-",
-        #    help="Local filename to be saved to. '-' for stdout")
 
         render_type = ProxyStringType("Image")
         render_help = ("rendering def source of form <object>:<id>. "
@@ -369,40 +333,27 @@ class RenderControl(BaseControl):
         first = True
         for img in self.render_images(gateway, args.object, batch=1):
             ro = RenderObject(img)
-            try:
-                if args.style == 'plain':
-                    self.ctx.out(ro)
-                else:
-                    if not first:
-                        self.ctx.die(
-                            103,
-                            "Output styles not supported for multiple images")
-                    self.ctx.out(pydict_text_io.dump(ro.to_dict(), args.style))
-                    first = False
-            finally:
-                ro.close()
-        # gateway._assert_unregistered("info")
+            if args.style == 'plain':
+                self.ctx.out(ro)
+            else:
+                if not first:
+                    self.ctx.die(
+                        103,
+                        "Output styles not supported for multiple images")
+                self.ctx.out(pydict_text_io.dump(ro.to_dict(), args.style))
+                first = False
 
     def copy(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
         self._copy(gateway, args.object, args.target, args.skipthumbs)
-        # gateway._assert_unregistered("copy")
 
-    def _copy(self, gateway, obj, target, skipthumbs, close=True):
-        """
-            close - whether or not to close the source image
-        """
+    def _copy(self, gateway, obj, target, skipthumbs):
         for src_img in self.render_images(gateway, obj, batch=1):
-            # try:
             self._copy_single(gateway, src_img, target, skipthumbs)
-            # finally:
-            # if close:
-            # src_img._closeRE()
 
     def _copy_single(self, gateway, src_img, target, skipthumbs):
         for targets in self.render_images(gateway, target):
-            # try:
             batch = dict()
             for target in targets:
                 if target.id == src_img.id:
@@ -422,9 +373,6 @@ class RenderControl(BaseControl):
 
             if not skipthumbs:
                 self._generate_thumbs(batch.values())
-            # finally:
-            # for target in targets:
-            # target._closeRE()
 
     def update_channel_names(self, gateway, obj, namedict):
         for targets in self.render_images(gateway, obj):
@@ -494,7 +442,6 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.render_images(gateway, args.object, batch=1):
             iids.append(img.id)
-            # try:
             img.setActiveChannels(
                 cindices, windows=rangelist, colors=colourlist)
             if greyscale is not None:
@@ -517,16 +464,13 @@ class RenderControl(BaseControl):
                                   img, args.object,
                                   args.skipthumbs)
                 break
-            # finally:
-            # img._closeRE()
 
         if namedict:
             self._update_channel_names(gateway, iids, namedict)
 
-        # gateway._assert_unregistered("edit")
-
     def edit(self, args):
-        self.ctx.err("Warning: 'edit' command is deprecated (renamed to 'set')")
+        self.ctx.err("WARNING: 'edit' command is deprecated, please "
+                     "use 'set' instead.")
         self.set(args)
 
     def test(self, args):
@@ -534,11 +478,8 @@ class RenderControl(BaseControl):
         gateway = BlitzGateway(client_obj=client)
         gateway.SERVICE_OPTS.setOmeroGroup('-1')
         for img in self.render_images(gateway, args.object, batch=1):
-            # try:
             self.test_per_pixel(
                 client, img.getPrimaryPixels().id, args.force, args.thumb)
-            # finally:
-            # img._closeRE()
 
     def test_per_pixel(self, client, pixid, force, thumb):
         ctx = {'omero.group': '-1'}
@@ -550,7 +491,6 @@ class RenderControl(BaseControl):
         start = time.time()
         error = ""
         rps = client.sf.createRawPixelsStore()
-        msg = None
 
         try:
             rps.setPixelsId(long(pixid), False, fail)
