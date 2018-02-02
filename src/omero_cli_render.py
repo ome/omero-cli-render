@@ -237,7 +237,7 @@ class RenderControl(BaseControl):
         sub = parser.sub()
         info = parser.add(sub, self.info, DESC["INFO"])
         copy = parser.add(sub, self.copy, DESC["COPY"])
-        setCmd = parser.add(sub, self.set, DESC["SET"])
+        set_cmd = parser.add(sub, self.set, DESC["SET"])
         edit = parser.add(sub, self.edit, DESC["EDIT"])
         test = parser.add(sub, self.test, DESC["TEST"])
 
@@ -245,10 +245,10 @@ class RenderControl(BaseControl):
         render_help = ("rendering def source of form <object>:<id>. "
                        "Image is assumed if <object>: is omitted.")
 
-        for x in (info, copy, setCmd, edit, test):
+        for x in (info, copy, set_cmd, edit, test):
             x.add_argument("object", type=render_type, help=render_help)
 
-        setCmd.add_argument(
+        set_cmd.add_argument(
             "--copy", help="Batch edit images by copying rendering settings",
             action="store_true")
 
@@ -256,7 +256,7 @@ class RenderControl(BaseControl):
             "--copy", help="Batch edit images by copying rendering settings",
             action="store_true")
 
-        for x in (copy, setCmd, edit):
+        for x in (copy, set_cmd, edit):
             x.add_argument(
                 "--skipthumbs", help="Don't re-generate thumbnails",
                 action="store_true")
@@ -269,7 +269,7 @@ class RenderControl(BaseControl):
 
         copy.add_argument("target", type=render_type, help=render_help,
                           nargs="+")
-        setCmd.add_argument(
+        set_cmd.add_argument(
             "channels",
             help="Rendering definition, local file or OriginalFile:ID")
         edit.add_argument(
@@ -469,9 +469,7 @@ class RenderControl(BaseControl):
             self._update_channel_names(gateway, iids, namedict)
 
     def edit(self, args):
-        self.ctx.err("WARNING: 'edit' command is deprecated, please "
-                     "use 'set' instead.")
-        self.set(args)
+        self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
 
     def test(self, args):
         client = self.ctx.conn(args)
