@@ -66,9 +66,7 @@ class TestRender(CLITest):
                     img = w.getImage(index=i)
                     img.getThumbnail(
                         size=(96,), direct=False)
-                    # img._closeRE()
-        # self.imgobj._closeRE()
-        # assert not self.gw._assert_unregistered("create_image")
+        assert not self.gw._assert_unregistered("create_image")
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
@@ -169,7 +167,7 @@ class TestRender(CLITest):
     @pytest.mark.xfail(
         reason=('https://trello.com/c/lyyGuRow/'
                 '657-incorrect-logical-channels-in-clitest-importplates'))
-    def test_edit(self, target_name, tmpdir):
+    def test_set(self, target_name, tmpdir):
         sizec = 4
         greyscale = None
         # 4 channels so should default to colour model
@@ -180,7 +178,7 @@ class TestRender(CLITest):
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
         target = getattr(self, target_name)
-        self.args += ["edit", target, str(rdfile)]
+        self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
 
         iids = self.get_target_imageids(target)
@@ -194,14 +192,13 @@ class TestRender(CLITest):
             for c in xrange(len(channels)):
                 self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
             self.assert_image_rmodel(img, expected_greyscale)
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testEdit")
+        assert not gw._assert_unregistered("testSet")
 
-    # Once testEdit is no longer broken testEditSingleC could be merged into
+    # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     @pytest.mark.parametrize('greyscale', [None, True, False])
-    def test_edit_single_channel(self, target_name, greyscale, tmpdir):
+    def test_set_single_channel(self, target_name, greyscale, tmpdir):
         sizec = 1
         # 1 channel so should default to greyscale model
         expected_greyscale = ((greyscale is None) or greyscale)
@@ -211,7 +208,7 @@ class TestRender(CLITest):
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
         target = getattr(self, target_name)
-        self.args += ["edit", target, str(rdfile)]
+        self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
 
         iids = self.get_target_imageids(target)
@@ -229,5 +226,4 @@ class TestRender(CLITest):
             for c in xrange(len(channels)):
                 self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
             self.assert_image_rmodel(img, expected_greyscale)
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testEditSingleC")
+        # assert not gw._assert_unregistered("testSetSingleChannel")
