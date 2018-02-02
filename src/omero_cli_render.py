@@ -238,7 +238,7 @@ class RenderControl(BaseControl):
         sub = parser.sub()
         info = parser.add(sub, self.info, DESC["INFO"])
         copy = parser.add(sub, self.copy, DESC["COPY"])
-        set = parser.add(sub, self.set, DESC["SET"])
+        setCmd = parser.add(sub, self.set, DESC["SET"])
         edit = parser.add(sub, self.edit, DESC["EDIT"])
         test = parser.add(sub, self.test, DESC["TEST"])
 
@@ -246,10 +246,10 @@ class RenderControl(BaseControl):
         render_help = ("rendering def source of form <object>:<id>. "
                        "Image is assumed if <object>: is omitted.")
 
-        for x in (info, copy, set, edit, test):
+        for x in (info, copy, setCmd, edit, test):
             x.add_argument("object", type=render_type, help=render_help)
 
-        set.add_argument(
+        setCmd.add_argument(
             "--copy", help="Batch edit images by copying rendering settings",
             action="store_true")
 
@@ -257,7 +257,7 @@ class RenderControl(BaseControl):
             "--copy", help="Batch edit images by copying rendering settings",
             action="store_true")
 
-        for x in (copy, set, edit):
+        for x in (copy, setCmd, edit):
             x.add_argument(
                 "--skipthumbs", help="Don't re-generate thumbnails",
                 action="store_true")
@@ -270,7 +270,7 @@ class RenderControl(BaseControl):
 
         copy.add_argument("target", type=render_type, help=render_help,
                           nargs="+")
-        set.add_argument(
+        setCmd.add_argument(
             "channels",
             help="Rendering definition, local file or OriginalFile:ID")
         edit.add_argument(
