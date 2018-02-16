@@ -507,8 +507,9 @@ class RenderControl(BaseControl):
             # img._closeRE()
 
     def test_per_pixel(self, client, pixid, force, thumb):
-        fail = {"omero.pixeldata.fail_if_missing": "true"}
-        make = {"omero.pixeldata.fail_if_missing": "false"}
+        ctx = {'omero.group': '-1'}
+        fail = {"omero.pixeldata.fail_if_missing": "true", 'omero.group': '-1'}
+        make = {"omero.pixeldata.fail_if_missing": "false", 'omero.group': '-1'}
 
         start = time.time()
         error = ""
@@ -542,8 +543,8 @@ class RenderControl(BaseControl):
         elif thumb:
             tb = client.sf.createThumbnailStore()
             try:
-                tb.setPixelsId(long(pixid))
-                tb.getThumbnailByLongestSide(rint(96))
+                tb.setPixelsId(long(pixid), ctx)
+                tb.getThumbnailByLongestSide(rint(96), ctx)
             finally:
                 tb.close()
 
