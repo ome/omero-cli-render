@@ -499,6 +499,7 @@ class RenderControl(BaseControl):
     def test(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
+        gateway.SERVICE_OPTS.setOmeroGroup('-1')
         for img in self.render_images(gateway, args.object, batch=1):
             # try:
             self.test_per_pixel(
