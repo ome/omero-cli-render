@@ -38,7 +38,7 @@ DESC = {
     "EDIT": "Edit a rendering setting",
     "LIST": "List available rendering settings",
     "JPEG": "Render as JPEG",
-    "TEST": "Test that ",
+    "TEST": "Test that underlying pixel data is available",
 }
 
 HELP = """Tools for working with rendering settings
@@ -93,6 +93,13 @@ Examples:
 
     # ...optionally setting parameters
     bin/omero render jpeg --z=4 Image:6 > test.jpg
+
+    # %(TEST)s
+    bin/omero render test Image:7
+    bin/omero render test --skipthumbs Image:7
+    # If underlying pixel data is available don't regenerate thumbnails
+    bin/omero render test --force Image:7
+    # Force creation of pixel data file in binary repository if missing
 
 """ % DESC
 
