@@ -509,8 +509,10 @@ class RenderControl(BaseControl):
 
     def test_per_pixel(self, client, pixid, force, thumb):
         ctx = {'omero.group': '-1'}
-        fail = {"omero.pixeldata.fail_if_missing": "true", 'omero.group': '-1'}
-        make = {"omero.pixeldata.fail_if_missing": "false", 'omero.group': '-1'}
+        fail = {"omero.pixeldata.fail_if_missing": "true"}
+        fail.update(ctx)
+        make = {"omero.pixeldata.fail_if_missing": "false"}
+        make.update(ctx)
 
         start = time.time()
         error = ""
