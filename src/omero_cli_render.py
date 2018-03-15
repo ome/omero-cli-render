@@ -28,6 +28,8 @@ from omero.gateway import BlitzGateway
 from omero.model import Image
 from omero.model import Plate
 from omero.model import Screen
+from omero.model import Dataset
+from omero.model import Project
 from omero.rtypes import rint
 from omero.util import pydict_text_io
 
@@ -318,6 +320,27 @@ class RenderControl(BaseControl):
                             rv = []
             if rv:
                 yield rv
+
+        elif isinstance(object, Project):
+            prj = self._lookup(gateway, "Project", object.id)
+            for ds in prj.listChildren():
+                for rv in self.render_images(gateway, ds._obj, batch):
+                    yield rv
+
+        elif isinstance(object, Dataset):
+            ds = self._lookup(gateway, "Dataset", object.id)
+            rv = []
+            for img in ds.listChildren():
+                if batch == 1:
+                    yield img
+                else:
+                    rv.append(img)
+                    if len(rv) == batch:
+                        yield rv
+                        rv = []
+            if rv:
+                yield rv
+
         elif isinstance(object, Image):
             img = self._lookup(gateway, "Image", object.id)
             if batch == 1:
