@@ -96,10 +96,8 @@ Examples:
 
     # %(TEST)s
     bin/omero render test Image:7
-    bin/omero render test --skipthumbs Image:7
-    # If underlying pixel data is available don't regenerate thumbnails
+    bin/omero render test --thumb Image:7
     bin/omero render test --force Image:7
-    # Force creation of pixel data file in binary repository if missing
 
 """ % DESC
 
@@ -297,8 +295,15 @@ class RenderControl(BaseControl):
             "channels",
             help="Rendering definition, local file or OriginalFile:ID")
 
-        test.add_argument("--force", action="store_true")
-        test.add_argument("--thumb", action="store_true")
+        test.add_argument(
+            "--force", action="store_true",
+            help="Force creation of pixel data file in binary "
+                 "repository if missing"
+        )
+        test.add_argument(
+            "--thumb", action="store_true",
+            help="If underlying pixel data available test thumbnail retrieval"
+        )
 
     def _lookup(self, gateway, type, oid):
         # TODO: move _lookup to a _configure type
