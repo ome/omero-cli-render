@@ -38,7 +38,7 @@ DESC = {
     "EDIT": "Edit a rendering setting",
     "LIST": "List available rendering settings",
     "JPEG": "Render as JPEG",
-    "TEST": "Test that ",
+    "TEST": "Test that underlying pixel data is available",
 }
 
 HELP = """Tools for working with rendering settings
@@ -93,6 +93,11 @@ Examples:
 
     # ...optionally setting parameters
     bin/omero render jpeg --z=4 Image:6 > test.jpg
+
+    # %(TEST)s
+    bin/omero render test Image:7
+    bin/omero render test --thumb Image:7
+    bin/omero render test --force Image:7
 
 """ % DESC
 
@@ -290,8 +295,15 @@ class RenderControl(BaseControl):
             "channels",
             help="Rendering definition, local file or OriginalFile:ID")
 
-        test.add_argument("--force", action="store_true")
-        test.add_argument("--thumb", action="store_true")
+        test.add_argument(
+            "--force", action="store_true",
+            help="Force creation of pixel data file in binary "
+                 "repository if missing"
+        )
+        test.add_argument(
+            "--thumb", action="store_true",
+            help="If underlying pixel data available test thumbnail retrieval"
+        )
 
     def _lookup(self, gateway, type, oid):
         # TODO: move _lookup to a _configure type
@@ -499,6 +511,7 @@ class RenderControl(BaseControl):
     def test(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
+        gateway.SERVICE_OPTS.setOmeroGroup('-1')
         for img in self.render_images(gateway, args.object, batch=1):
             # try:
             self.test_per_pixel(
@@ -507,8 +520,11 @@ class RenderControl(BaseControl):
             # img._closeRE()
 
     def test_per_pixel(self, client, pixid, force, thumb):
+        ctx = {'omero.group': '-1'}
         fail = {"omero.pixeldata.fail_if_missing": "true"}
+        fail.update(ctx)
         make = {"omero.pixeldata.fail_if_missing": "false"}
+        make.update(ctx)
 
         start = time.time()
         error = ""
@@ -542,8 +558,8 @@ class RenderControl(BaseControl):
         elif thumb:
             tb = client.sf.createThumbnailStore()
             try:
-                tb.setPixelsId(long(pixid))
-                tb.getThumbnailByLongestSide(rint(96))
+                tb.setPixelsId(long(pixid), ctx)
+                tb.getThumbnailByLongestSide(rint(96), ctx)
             finally:
                 tb.close()
 

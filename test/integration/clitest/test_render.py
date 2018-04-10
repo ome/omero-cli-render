@@ -231,3 +231,15 @@ class TestRender(CLITest):
             self.assert_image_rmodel(img, expected_greyscale)
             # img._closeRE()
         # assert not gw._assert_unregistered("testEditSingleC")
+
+    @pytest.mark.permissions
+    def test_cross_group(self, capsys):
+        img = self.create_image(sizec=1)
+        login = self.root_login_args()
+        # Run test as self and as root
+        self.cli.invoke(self.args+ ["test", self.imageid], strict=True)
+        self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
+        out, err = capsys.readouterr()
+        lines = out.split("\n")
+        assert "ok" in lines[0]
+        assert "ok" in lines[1]
