@@ -60,6 +60,7 @@ class TestRender(CLITest):
         for i in images:
             img = self.gw.getObject("Image", i.id.val)
             img.getThumbnail(size=(96,), direct=False)
+        assert not self.gw._assert_unregistered("create_project")
 
     def create_image(self, sizec=4):
         self.gw = BlitzGateway(client_obj=self.client)
@@ -101,6 +102,17 @@ class TestRender(CLITest):
             for s in self.plates:
                 for w in self.plates[0].listChildren():
                     imgs.extend([w.getImage(0).id, w.getImage(1).id])
+            return imgs
+        if target == self.datasetid:
+            imgs = []
+            for img in self.dataset.listChildren():
+                imgs.append(img.id)
+            return imgs
+        if target == self.projectid:
+            imgs = []
+            for d in self.project.listChildren():
+                for img in d.listChildren():
+                    imgs.append(img.id)
             return imgs
         raise Exception('Unknown target: %s' % target)
 
@@ -202,7 +214,6 @@ class TestRender(CLITest):
         self.cli.invoke(self.args, strict=True)
 
         iids = self.get_target_imageids(target)
-        print 'Got %d images' % len(iids)
         gw = BlitzGateway(client_obj=self.client)
         for iid in iids:
             # Get the updated object
@@ -232,7 +243,6 @@ class TestRender(CLITest):
         self.cli.invoke(self.args, strict=True)
 
         iids = self.get_target_imageids(target)
-        print 'Got %d images' % len(iids)
         gw = BlitzGateway(client_obj=self.client)
         for iid in iids:
             # Get the updated object

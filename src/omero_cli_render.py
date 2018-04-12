@@ -290,6 +290,7 @@ class RenderControl(BaseControl):
 
     def _lookup(self, gateway, type, oid):
         # TODO: move _lookup to a _configure type
+        gateway.SERVICE_OPTS.setOmeroGroup('-1')
         obj = gateway.getObject(type, oid)
         if not obj:
             self.ctx.die(110, "No such %s: %s" % (type, oid))
