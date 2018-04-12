@@ -489,6 +489,10 @@ class RenderControl(BaseControl):
                                   args.skipthumbs)
                 break
 
+        if not iids:
+            self.ctx.die(113, "ERROR: No images found for %s %d" %
+                         (args.object.__class__.__name__, args.object.id._val))
+
         if namedict:
             self._update_channel_names(gateway, iids, namedict)
 
