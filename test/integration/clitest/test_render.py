@@ -77,7 +77,8 @@ class TestRender(CLITest):
         self.projectid = "Project:%s" % self.project.id
         self.datasetid = "Dataset:%s" % self.dataset.id
         self.link(obj1=project, obj2=dataset)
-        images = self.import_fake_file(images_count=1, sizeC=sizec, client=self.client)
+        images = self.import_fake_file(images_count=1, sizeC=sizec,
+                                       client=self.client)
         self.link(obj1=dataset, obj2=images[0])
         img = self.gw.getObject("Image", images[0].id.val)
         img.getThumbnail(size=(96,), direct=False)
@@ -255,10 +256,10 @@ class TestRender(CLITest):
 
     @pytest.mark.permissions
     def test_cross_group(self, capsys):
-        img = self.create_image(sizec=1)
+        self.create_image(sizec=1)
         login = self.root_login_args()
         # Run test as self and as root
-        self.cli.invoke(self.args+ ["test", self.imageid], strict=True)
+        self.cli.invoke(self.args + ["test", self.imageid], strict=True)
         self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
         out, err = capsys.readouterr()
         lines = out.split("\n")
