@@ -27,8 +27,6 @@ from omero.cli import NonZeroReturnCode
 from cli import CLITest
 from omero.gateway import BlitzGateway
 
-from omero.model import DatasetI, DatasetImageLinkI, ImageI, ProjectI
-
 
 # TODO: rdefid, tbid
 SUPPORTED = {
@@ -36,8 +34,8 @@ SUPPORTED = {
     "imageid": "Image:-1",
     "plateid": "Plate:-1",
     "screenid": "Screen:-1",
-    "projectid": "Project:-1",
-    "datasetid": "Dataset:-1"
+    "datasetid": "Dataset:-1",
+    "projectid": "Project:-1"
 }
 
 
@@ -48,25 +46,8 @@ class TestRender(CLITest):
         self.cli.register("render", RenderControl, "TEST")
         self.args += ["render"]
 
-    def create_project(self, **kwargs):
-        self.project = self.make_project(client=self.client)
-        self.dataset = self.make_dataset(client=self.client)
-        self.projectid = "Project:%s" % self.project.id._val
-        self.datasetid = "Dataset:%s" % self.dataset.id._val
-
-        self.link(obj1=self.project, obj2=self.dataset)
-        target = "Dataset:%s" % self.datasetid
-        images = self.import_fake_file(images_count=0, client=self.client, T=target, **kwargs)
-        for i in images:
-            img = self.gw.getObject("Image", i.id.val)
-            img.getThumbnail(size=(96,), direct=False)
-        assert not self.gw._assert_unregistered("create_project")
-
     def create_image(self, sizec=4):
         self.gw = BlitzGateway(client_obj=self.client)
-
-        self.create_project(sizec=sizec)
-
         self.plates = []
         for plate in self.import_plates(client=self.client, fields=2,
                                         sizeC=sizec, screens=1):
@@ -87,7 +68,19 @@ class TestRender(CLITest):
                     img = w.getImage(index=i)
                     img.getThumbnail(
                         size=(96,), direct=False)
-        assert not self.gw._assert_unregistered("create_image")
+
+        # Create Project/Dataset hierarchy
+        project = self.make_project(client=self.client)
+        self.project = self.gw.getObject("Project", project.id.val)
+        dataset = self.make_dataset(client=self.client)
+        self.dataset = self.gw.getObject("Dataset", dataset.id.val)
+        self.projectid = "Project:%s" % self.project.id
+        self.datasetid = "Dataset:%s" % self.dataset.id
+        self.link(obj1=project, obj2=dataset)
+        images = self.import_fake_file(images_count=1, sizeC=sizec, client=self.client)
+        self.link(obj1=dataset, obj2=images[0])
+        img = self.gw.getObject("Image", images[0].id.val)
+        img.getThumbnail(size=(96,), direct=False)
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
@@ -223,7 +216,8 @@ class TestRender(CLITest):
             for c in xrange(len(channels)):
                 self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
             self.assert_image_rmodel(img, expected_greyscale)
-        assert not gw._assert_unregistered("testSet")
+            # img._closeRE()
+        # assert not gw._assert_unregistered("testSet")
 
     # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
