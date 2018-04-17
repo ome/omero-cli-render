@@ -76,7 +76,7 @@ Examples:
     # for all the remaining images in the collection, using the first image
     # as the source. Note using this flag may have different results from not
     # using it if the images had different settings to begin with and you are
-    # only overridding a subset of the settings (all images will end up with
+    # only overriding a subset of the settings (all images will end up with
     # the same full rendering settings).
 
     bin/omero render set --skipthumbs ...
