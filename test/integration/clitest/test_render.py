@@ -34,6 +34,8 @@ SUPPORTED = {
     "imageid": "Image:-1",
     "plateid": "Plate:-1",
     "screenid": "Screen:-1",
+    "datasetid": "Dataset:-1",
+    "projectid": "Project:-1"
 }
 
 
@@ -66,9 +68,20 @@ class TestRender(CLITest):
                     img = w.getImage(index=i)
                     img.getThumbnail(
                         size=(96,), direct=False)
-                    # img._closeRE()
-        # self.imgobj._closeRE()
-        # assert not self.gw._assert_unregistered("create_image")
+
+        # Create Project/Dataset hierarchy
+        project = self.make_project(client=self.client)
+        self.project = self.gw.getObject("Project", project.id.val)
+        dataset = self.make_dataset(client=self.client)
+        self.dataset = self.gw.getObject("Dataset", dataset.id.val)
+        self.projectid = "Project:%s" % self.project.id
+        self.datasetid = "Dataset:%s" % self.dataset.id
+        self.link(obj1=project, obj2=dataset)
+        images = self.import_fake_file(images_count=1, sizeC=sizec,
+                                       client=self.client)
+        self.link(obj1=dataset, obj2=images[0])
+        img = self.gw.getObject("Image", images[0].id.val)
+        img.getThumbnail(size=(96,), direct=False)
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
@@ -83,6 +96,17 @@ class TestRender(CLITest):
             for s in self.plates:
                 for w in self.plates[0].listChildren():
                     imgs.extend([w.getImage(0).id, w.getImage(1).id])
+            return imgs
+        if target == self.datasetid:
+            imgs = []
+            for img in self.dataset.listChildren():
+                imgs.append(img.id)
+            return imgs
+        if target == self.projectid:
+            imgs = []
+            for d in self.project.listChildren():
+                for img in d.listChildren():
+                    imgs.append(img.id)
             return imgs
         raise Exception('Unknown target: %s' % target)
 
@@ -169,7 +193,7 @@ class TestRender(CLITest):
     @pytest.mark.xfail(
         reason=('https://trello.com/c/lyyGuRow/'
                 '657-incorrect-logical-channels-in-clitest-importplates'))
-    def test_edit(self, target_name, tmpdir):
+    def test_set(self, target_name, tmpdir):
         sizec = 4
         greyscale = None
         # 4 channels so should default to colour model
@@ -180,11 +204,10 @@ class TestRender(CLITest):
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
         target = getattr(self, target_name)
-        self.args += ["edit", target, str(rdfile)]
+        self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
 
         iids = self.get_target_imageids(target)
-        print 'Got %d images' % len(iids)
         gw = BlitzGateway(client_obj=self.client)
         for iid in iids:
             # Get the updated object
@@ -195,13 +218,13 @@ class TestRender(CLITest):
                 self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
             self.assert_image_rmodel(img, expected_greyscale)
             # img._closeRE()
-        # assert not gw._assert_unregistered("testEdit")
+        # assert not gw._assert_unregistered("testSet")
 
-    # Once testEdit is no longer broken testEditSingleC could be merged into
+    # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     @pytest.mark.parametrize('greyscale', [None, True, False])
-    def test_edit_single_channel(self, target_name, greyscale, tmpdir):
+    def test_set_single_channel(self, target_name, greyscale, tmpdir):
         sizec = 1
         # 1 channel so should default to greyscale model
         expected_greyscale = ((greyscale is None) or greyscale)
@@ -211,11 +234,10 @@ class TestRender(CLITest):
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
         target = getattr(self, target_name)
-        self.args += ["edit", target, str(rdfile)]
+        self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
 
         iids = self.get_target_imageids(target)
-        print 'Got %d images' % len(iids)
         gw = BlitzGateway(client_obj=self.client)
         for iid in iids:
             # Get the updated object
@@ -234,10 +256,10 @@ class TestRender(CLITest):
 
     @pytest.mark.permissions
     def test_cross_group(self, capsys):
-        img = self.create_image(sizec=1)
+        self.create_image(sizec=1)
         login = self.root_login_args()
         # Run test as self and as root
-        self.cli.invoke(self.args+ ["test", self.imageid], strict=True)
+        self.cli.invoke(self.args + ["test", self.imageid], strict=True)
         self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
         out, err = capsys.readouterr()
         lines = out.split("\n")
