@@ -101,6 +101,7 @@ TEST_HELP = """
 Test that underlying pixel data is available
 """
 
+
 def _set_if_not_none(dictionary, k, v):
     if v is not None:
         dictionary[k] = v
@@ -259,15 +260,16 @@ class RenderControl(BaseControl):
         for x in (info, copy, test):
             x.add_argument("object", type=render_type, help=render_help)
 
-        set_help = ("Object to apply the rendering settings to in form <object>:<id>. "
-                       "Image is assumed if <object>: is omitted.")
+        set_help = ("Object to apply the rendering settings to in "
+                    "form <object>:<id>. Image is assumed if <object>: "
+                    "is omitted.")
         for x in (set_cmd, edit):
             x.add_argument("object", type=render_type, help=set_help)
 
         for x in (copy, set_cmd, edit):
             x.add_argument(
-                "--skipthumbs", help="Don't re-generate thumbnails immediately",
-                action="store_true")
+                "--skipthumbs", help="Don't re-generate thumbnails "
+                                     "immediately", action="store_true")
 
         output_formats = ['plain'] + list(
             pydict_text_io.get_supported_formats())
