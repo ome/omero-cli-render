@@ -441,8 +441,6 @@ class RenderControl(BaseControl):
         for (i, c) in newchannels.iteritems():
             if c.label:
                 namedict[i] = c.label
-            if not c.active:
-                continue
             cindices.append(i)
             rangelist.append([c.min, c.max])
             colourlist.append(c.color)
@@ -450,7 +448,17 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.render_images(gateway, args.object, batch=1):
             iids.append(img.id)
-            img.setActiveChannels(
+
+            # Workaround: Calling set_active_channels would disable
+            # channels which are not specified.
+            imgChannels = img.getChannels()
+            for c in range(len(imgChannels)):
+                if (c+1) not in cindices and imgChannels[c].isActive():
+                    cindices.append(c+1)
+                    rangelist.append([None, None])
+                    colourlist.append(None)
+
+            img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
             if greyscale is not None:
                 if greyscale:
