@@ -71,14 +71,6 @@ Examples:
     # Omitted fields will keep their current values, omitted channel-indices
     # will be turned off.
 
-    bin/omero render set --copy Screen:1 <YAML or JSON file>
-    # Equivalent to calling set for a single image followed by calling copy
-    # for all the remaining images in the collection, using the first image
-    # as the source. Note using this flag may have different results from not
-    # using it if the images had different settings to begin with and you are
-    # only overriding a subset of the settings (all images will end up with
-    # the same full rendering settings).
-
     bin/omero render set --skipthumbs ...
     # Update rendering settings but don't regenerate thumbnails.
 
@@ -249,14 +241,6 @@ class RenderControl(BaseControl):
 
         for x in (info, copy, set_cmd, edit, test):
             x.add_argument("object", type=render_type, help=render_help)
-
-        set_cmd.add_argument(
-            "--copy", help="Batch edit images by copying rendering settings",
-            action="store_true")
-
-        edit.add_argument(
-            "--copy", help="Batch edit images by copying rendering settings",
-            action="store_true")
 
         for x in (copy, set_cmd, edit):
             x.add_argument(
@@ -479,15 +463,6 @@ class RenderControl(BaseControl):
                 "Updated rendering settings for Image:%s" % img.id)
             if not args.skipthumbs:
                 self._generate_thumbs([img])
-
-            if args.copy:
-                # Edit first image only, copy to rest
-                # Don't close source image until outer
-                # loop is done.
-                self._copy_single(gateway,
-                                  img, args.object,
-                                  args.skipthumbs)
-                break
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
