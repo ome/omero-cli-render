@@ -35,24 +35,38 @@ from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
 
-DESC = {
-    "COPY": "Copy rendering setting to multiple objects",
-    "INFO": "Show details of a rendering setting",
-    "SET": "Set a rendering setting",
-    "EDIT": "Deprecated, please use 'set' instead",
-    "TEST": "Test that underlying pixel data is available"
-}
+HELP = "Tools for working with rendering settings"
 
-HELP = """Tools for working with rendering settings
+INFO_HELP = """
+Show details of a rendering setting
 
-Examples:
-
-    # %(INFO)s
+    Examples: 
     bin/omero render info RenderingDef:1
     bin/omero render info Image:123
+"""
 
-    # %(SET)s
+COPY_HELP = """
+Copy rendering setting to multiple objects
+
+    Examples:
+    bin/omero render copy RenderingDef:1 Image:123
+    bin/omero render copy Image:456: Image:222 Image:333
+    bin/omero render copy Image:456: Plate:1
+    bin/omero render copy Image:456: Dataset:1
+"""
+
+EDIT_HELP = """
+Deprecated, please use 'set' instead
+"""
+
+SET_HELP = """
+Set rendering settings
+
+    Examples:
+    
     bin/omero render set Image:1 <YAML or JSON file>
+    bin/omero render set Dataset:1 <YAML or JSON file>
+    
     # where the input file contains a top-level channels key (required), and
     # an optional top-level greyscale key (True: greyscale, False: colour).
     # Channel elements are index:dictionaries of the form:
@@ -67,22 +81,25 @@ Examples:
       <index>:
         ...
     greyscale: <(bool)>
+    
+    For example:
+    channels:
+      1:
+        color: "FF0000"
+        label: "Red"
+        min: 1
+        max: 255
+        active: True
+      2:
+        color: "00FF00"
+      ...
+      
+    # Omitted fields will keep their current values
+"""
 
-    # Omitted fields will keep their current values, omitted channel-indices
-    # will be turned off.
-
-    bin/omero render set --skipthumbs ...
-    # Update rendering settings but don't regenerate thumbnails.
-
-    # %(COPY)s
-    bin/omero render copy RenderingDef:1 Image:123
-    bin/omero render copy Image:456: Image:789
-    bin/omero render copy Image:456: Image:222 Image:333
-    bin/omero render copy Image:456: Plate:1
-    bin/omero render copy Image:456: Screen:2
-    bin/omero render copy Image:456: Dataset:3
-""" % DESC
-
+TEST_HELP = """
+Test that underlying pixel data is available
+"""
 
 def _set_if_not_none(dictionary, k, v):
     if v is not None:
@@ -229,22 +246,27 @@ class RenderControl(BaseControl):
     def _configure(self, parser):
         parser.add_login_arguments()
         sub = parser.sub()
-        info = parser.add(sub, self.info, DESC["INFO"])
-        copy = parser.add(sub, self.copy, DESC["COPY"])
-        set_cmd = parser.add(sub, self.set, DESC["SET"])
-        edit = parser.add(sub, self.edit, DESC["EDIT"])
-        test = parser.add(sub, self.test, DESC["TEST"])
+        info = parser.add(sub, self.info, INFO_HELP)
+        copy = parser.add(sub, self.copy, COPY_HELP)
+        set_cmd = parser.add(sub, self.set, SET_HELP)
+        edit = parser.add(sub, self.edit, EDIT_HELP)
+        test = parser.add(sub, self.test, TEST_HELP)
 
         render_type = ProxyStringType("Image")
-        render_help = ("rendering def source of form <object>:<id>. "
+        render_help = ("Rendering def source of form <object>:<id>. "
                        "Image is assumed if <object>: is omitted.")
 
-        for x in (info, copy, set_cmd, edit, test):
+        for x in (info, copy, test):
             x.add_argument("object", type=render_type, help=render_help)
+
+        set_help = ("Object to apply the rendering settings to in form <object>:<id>. "
+                       "Image is assumed if <object>: is omitted.")
+        for x in (set_cmd, edit):
+            x.add_argument("object", type=render_type, help=set_help)
 
         for x in (copy, set_cmd, edit):
             x.add_argument(
-                "--skipthumbs", help="Don't re-generate thumbnails",
+                "--skipthumbs", help="Don't re-generate thumbnails immediately",
                 action="store_true")
 
         output_formats = ['plain'] + list(
