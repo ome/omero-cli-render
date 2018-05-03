@@ -45,12 +45,13 @@ INFO_HELP = """Show details of a rendering setting
 """
 
 COPY_HELP = """Copy rendering setting to multiple objects
+    Targets can be Image(s), Dataset(s), Project(s), Plate(s) or Screen(s).
 
     Examples:
     bin/omero render copy RenderingDef:1 Image:123
-    bin/omero render copy Image:456: Image:222 Image:333
-    bin/omero render copy Image:456: Plate:1
-    bin/omero render copy Image:456: Dataset:1
+    bin/omero render copy Image:456 Image:222 Image:333
+    bin/omero render copy Image:456 Plate:1
+    bin/omero render copy Image:456 Dataset:1
 """
 
 EDIT_HELP = "Deprecated, please use 'set' instead"
@@ -63,7 +64,7 @@ SET_HELP = """Set rendering settings
     bin/omero render set Dataset:1 <YAML or JSON file>
     
     # where the input file contains a top-level channels key (required), and
-    # an optional top-level greyscale key (True: greyscale, False: colour).
+    # an optional top-level greyscale key (True: greyscale, False: color).
     # Channel elements are index:dictionaries of the form:
 
     channels:
@@ -92,7 +93,14 @@ SET_HELP = """Set rendering settings
     # Omitted fields will keep their current values
 """
 
-TEST_HELP = "Test that underlying pixel data is available"
+TEST_HELP = """Test that underlying pixel data is available
+
+    Output:
+    <Status>: <Pixels ID> <Time (in sec) to load the thumbnail> \
+<Error details, if any>
+
+    Where status is either ok, miss, fill, cancel, or fail.
+"""
 
 
 def _set_if_not_none(dictionary, k, v):
@@ -247,21 +255,22 @@ class RenderControl(BaseControl):
         test = parser.add(sub, self.test, TEST_HELP)
 
         render_type = ProxyStringType("Image")
-        render_help = ("Rendering def source of form <object>:<id>. "
-                       "Image is assumed if <object>: is omitted.")
+        src_help = ("Rendering def source in the form <object>:<id>. "
+                    "Image is assumed if <object>: is omitted.")
 
         for x in (info, copy, test):
-            x.add_argument("object", type=render_type, help=render_help)
+            x.add_argument("object", type=render_type, help=src_help)
 
-        set_help = ("Object to apply the rendering settings to in "
-                    "form <object>:<id>. Image is assumed if <object>: "
+        tgt_help = ("Object to apply the rendering settings to in "
+                    "the form <object>:<id>. Image is assumed if <object>: "
                     "is omitted.")
         for x in (set_cmd, edit):
-            x.add_argument("object", type=render_type, help=set_help)
+            x.add_argument("object", type=render_type, help=tgt_help,
+                           nargs="+")
 
         for x in (copy, set_cmd, edit):
             x.add_argument(
-                "--skipthumbs", help="Don't re-generate thumbnails "
+                "--skipthumbs", help="Do not regenerate thumbnails "
                                      "immediately", action="store_true")
 
         output_formats = ['plain'] + list(
@@ -270,7 +279,7 @@ class RenderControl(BaseControl):
             "--style", choices=output_formats, default='plain',
             help="Output format")
 
-        copy.add_argument("target", type=render_type, help=render_help,
+        copy.add_argument("target", type=render_type, help=tgt_help,
                           nargs="+")
         set_cmd.add_argument(
             "channels",
@@ -466,6 +475,7 @@ class RenderControl(BaseControl):
         for img in self.render_images(gateway, args.object, batch=1):
             iids.append(img.id)
 
+            # TODO: Remove again once there's an appropriate gateway method
             # Workaround: Calling set_active_channels would disable
             # channels which are not specified.
             imgChannels = img.getChannels()
