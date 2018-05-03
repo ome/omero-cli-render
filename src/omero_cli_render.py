@@ -403,6 +403,9 @@ class RenderControl(BaseControl):
                 self.ctx.err("Error: Image:%s" % missing)
                 del batch[missing]
 
+            self.ctx.out("Rendering settings successfully copied to %d images."
+                         % len(rv[True]))
+
             if not skipthumbs:
                 self._generate_thumbs(batch.values())
 
