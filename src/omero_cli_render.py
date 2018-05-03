@@ -37,16 +37,14 @@ from omero import UnloadedEntityException
 
 HELP = "Tools for working with rendering settings"
 
-INFO_HELP = """
-Show details of a rendering setting
+INFO_HELP = """Show details of a rendering setting
 
     Examples: 
     bin/omero render info RenderingDef:1
     bin/omero render info Image:123
 """
 
-COPY_HELP = """
-Copy rendering setting to multiple objects
+COPY_HELP = """Copy rendering setting to multiple objects
 
     Examples:
     bin/omero render copy RenderingDef:1 Image:123
@@ -55,12 +53,9 @@ Copy rendering setting to multiple objects
     bin/omero render copy Image:456: Dataset:1
 """
 
-EDIT_HELP = """
-Deprecated, please use 'set' instead
-"""
+EDIT_HELP = "Deprecated, please use 'set' instead"
 
-SET_HELP = """
-Set rendering settings
+SET_HELP = """Set rendering settings
 
     Examples:
     
@@ -97,9 +92,7 @@ Set rendering settings
     # Omitted fields will keep their current values
 """
 
-TEST_HELP = """
-Test that underlying pixel data is available
-"""
+TEST_HELP = "Test that underlying pixel data is available"
 
 
 def _set_if_not_none(dictionary, k, v):
