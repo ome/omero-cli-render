@@ -39,8 +39,7 @@ HELP = "Tools for working with rendering settings"
 
 INFO_HELP = """Show details of a rendering setting
 
-    Examples: 
-    bin/omero render info RenderingDef:1
+    Examples:
     bin/omero render info Image:123
 """
 
@@ -48,7 +47,6 @@ COPY_HELP = """Copy rendering setting to multiple objects
     Targets can be Image(s), Dataset(s), Project(s), Plate(s) or Screen(s).
 
     Examples:
-    bin/omero render copy RenderingDef:1 Image:123
     bin/omero render copy Image:456 Image:222 Image:333
     bin/omero render copy Image:456 Plate:1
     bin/omero render copy Image:456 Dataset:1
