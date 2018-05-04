@@ -88,10 +88,11 @@ SET_HELP = """Set rendering settings
         color: "00FF00"
       ...
       
-    # Omitted fields will keep their current values
-    
-    # If a channel is turned off (active: False) other settings like min,
-    # max, etc. will be ignored.
+    # Omitted fields will keep their current values.
+    # If the file specifies to turn off a channel (active: False) then the
+    # other settings like min, max, and color which might be specified for
+    # that channel in the same file will be ignored, however the channel 
+    # name (label) is still taken into account.
 """
 
 TEST_HELP = """Test that underlying pixel data is available
@@ -257,14 +258,16 @@ class RenderControl(BaseControl):
 
         render_type = ProxyStringType("Image")
         src_help = ("Rendering def source in the form <object>:<id>. "
-                    "Image is assumed if <object>: is omitted.")
+                    "Image is assumed if <object>: is omitted. Object "
+                    "can be Image, Project, Dataset, Plate or Screen")
 
         for x in (info, copy, test):
             x.add_argument("object", type=render_type, help=src_help)
 
         tgt_help = ("Object to apply the rendering settings to in "
                     "the form <object>:<id>. Image is assumed if <object>: "
-                    "is omitted.")
+                    "is omitted. Object can be Image, Project, Dataset, Plate "
+                    "or Screen")
         for x in (set_cmd, edit):
             x.add_argument("object", type=render_type, help=tgt_help,
                            nargs="+")
@@ -284,10 +287,10 @@ class RenderControl(BaseControl):
                           nargs="+")
         set_cmd.add_argument(
             "channels",
-            help="Rendering definition, local file or OriginalFile:ID")
+            help="Rendering settings, local file or OriginalFile:ID")
         edit.add_argument(
             "channels",
-            help="Rendering definition, local file or OriginalFile:ID")
+            help="Rendering settings, local file or OriginalFile:ID")
 
         test.add_argument(
             "--force", action="store_true",
