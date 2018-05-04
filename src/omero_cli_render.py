@@ -466,6 +466,7 @@ class RenderControl(BaseControl):
 
         try:
             greyscale = data['greyscale']
+            print 'greyscale=%s' % data['greyscale']
         except KeyError:
             greyscale = None
 
