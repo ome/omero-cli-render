@@ -287,10 +287,12 @@ class RenderControl(BaseControl):
                           nargs="+")
         set_cmd.add_argument(
             "channels",
-            help="Rendering settings, local file or OriginalFile:ID")
+            help="Local file or OriginalFile:ID which specifies the "
+                 "rendering settings")
         edit.add_argument(
             "channels",
-            help="Rendering settings, local file or OriginalFile:ID")
+            help="Local file or OriginalFile:ID which specifies the "
+                 "rendering settings")
 
         test.add_argument(
             "--force", action="store_true",
