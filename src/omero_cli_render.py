@@ -38,14 +38,24 @@ from omero import UnloadedEntityException
 HELP = "Tools for working with rendering settings"
 
 INFO_HELP = """Show details of a rendering setting
-
+    
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
     Examples:
     bin/omero render info Image:123
 """
 
 COPY_HELP = """Copy rendering setting to multiple objects
-    Targets can be Image(s), Dataset(s), Project(s), Plate(s) or Screen(s).
-
+    
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
+    The first argument is the source of the rendering settings,
+    the following arguments are the targets.
+    
     Examples:
     bin/omero render copy Image:456 Image:222 Image:333
     bin/omero render copy Image:456 Plate:1
@@ -56,14 +66,17 @@ EDIT_HELP = "Deprecated, please use 'set' instead"
 
 SET_HELP = """Set rendering settings
 
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
     Examples:
+    bin/omero render set Image:1 settings.json
+    bin/omero render set Dataset:1 settings.yml
     
-    bin/omero render set Image:1 <YAML or JSON file>
-    bin/omero render set Dataset:1 <YAML or JSON file>
-    
-    # where the input file contains a top-level channels key (required), and
-    # an optional top-level greyscale key (True: greyscale, False: color).
-    # Channel elements are index:dictionaries of the form:
+    # where the input file (YAML or JSON) contains a top-level channels 
+    # key (required), and an optional top-level greyscale key (True: greyscale,
+    # False: color). Channel elements are index:dictionaries of the form:
 
     channels:
       <index>: (Channel-index, int, 1-based)
@@ -96,12 +109,19 @@ SET_HELP = """Set rendering settings
 """
 
 TEST_HELP = """Test that underlying pixel data is available
-
+    
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
     Output:
     <Status>: <Pixels ID> <Time (in sec) to load the thumbnail> \
 <Error details, if any>
 
     Where status is either ok, miss, fill, cancel, or fail.
+    
+    Examples:
+    bin/omero render test Image:1 
 """
 
 
@@ -257,17 +277,12 @@ class RenderControl(BaseControl):
         test = parser.add(sub, self.test, TEST_HELP)
 
         render_type = ProxyStringType("Image")
-        src_help = ("Rendering def source in the form <object>:<id>. "
-                    "Image is assumed if <object>: is omitted. Object "
-                    "can be Image, Project, Dataset, Plate or Screen")
+        src_help = ("Rendering settings source")
 
         for x in (info, copy, test):
             x.add_argument("object", type=render_type, help=src_help)
 
-        tgt_help = ("Object to apply the rendering settings to in "
-                    "the form <object>:<id>. Image is assumed if <object>: "
-                    "is omitted. Object can be Image, Project, Dataset, Plate "
-                    "or Screen")
+        tgt_help = ("Objects to apply the rendering settings to")
         for x in (set_cmd, edit):
             x.add_argument("object", type=render_type, help=tgt_help,
                            nargs="+")
