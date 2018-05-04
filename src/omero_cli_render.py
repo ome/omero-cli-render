@@ -89,6 +89,9 @@ SET_HELP = """Set rendering settings
       ...
       
     # Omitted fields will keep their current values
+    
+    # If a channel is turned off (active: False) other settings like min,
+    # max, etc. will be ignored.
 """
 
 TEST_HELP = """Test that underlying pixel data is available
@@ -468,7 +471,10 @@ class RenderControl(BaseControl):
         for (i, c) in newchannels.iteritems():
             if c.label:
                 namedict[i] = c.label
-            cindices.append(i)
+            if c.active is False:
+                cindices.append(-i)
+            else:
+                cindices.append(i)
             rangelist.append([c.min, c.max])
             colourlist.append(c.color)
 
@@ -481,7 +487,8 @@ class RenderControl(BaseControl):
             # channels which are not specified.
             imgChannels = img.getChannels()
             for c in range(len(imgChannels)):
-                if (c+1) not in cindices and imgChannels[c].isActive():
+                if (c+1) not in cindices and -(c+1) not in cindices\
+                        and imgChannels[c].isActive():
                     cindices.append(c+1)
                     rangelist.append([None, None])
                     colourlist.append(None)
