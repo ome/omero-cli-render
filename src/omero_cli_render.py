@@ -35,27 +35,48 @@ from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
 
-DESC = {
-    "COPY": "Copy rendering setting to multiple objects",
-    "INFO": "Show details of a rendering setting",
-    "SET": "Set a rendering setting",
-    "EDIT": "Deprecated, please use 'set' instead",
-    "TEST": "Test that underlying pixel data is available"
-}
+HELP = "Tools for working with rendering settings"
 
-HELP = """Tools for working with rendering settings
-
-Examples:
-
-    # %(INFO)s
-    bin/omero render info RenderingDef:1
+INFO_HELP = """Show details of a rendering setting
+    
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
+    Examples:
     bin/omero render info Image:123
+"""
 
-    # %(SET)s
-    bin/omero render set Image:1 <YAML or JSON file>
-    # where the input file contains a top-level channels key (required), and
-    # an optional top-level greyscale key (True: greyscale, False: colour).
-    # Channel elements are index:dictionaries of the form:
+COPY_HELP = """Copy rendering setting to multiple objects
+    
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
+    The first argument is the source of the rendering settings,
+    the following arguments are the targets.
+    
+    Examples:
+    bin/omero render copy Image:456 Image:222 Image:333
+    bin/omero render copy Image:456 Plate:1
+    bin/omero render copy Image:456 Dataset:1
+"""
+
+EDIT_HELP = "Deprecated, please use 'set' instead"
+
+SET_HELP = """Set rendering settings
+
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
+    Examples:
+    bin/omero render set Image:1 settings.json
+    bin/omero render set Dataset:1 settings.yml
+    
+    # where the input file (YAML or JSON) contains a top-level channels 
+    # key (required), and an optional top-level greyscale key (True: greyscale,
+    # False: color). Channel elements are index:dictionaries of the form:
 
     channels:
       <index>: (Channel-index, int, 1-based)
@@ -67,29 +88,41 @@ Examples:
       <index>:
         ...
     greyscale: <(bool)>
+    
+    For example:
+    channels:
+      1:
+        color: "FF0000"
+        label: "Red"
+        min: 1
+        max: 255
+        active: True
+      2:
+        color: "00FF00"
+      ...
+      
+    # Omitted fields will keep their current values.
+    # If the file specifies to turn off a channel (active: False) then the
+    # other settings like min, max, and color which might be specified for
+    # that channel in the same file will be ignored, however the channel 
+    # name (label) is still taken into account.
+"""
 
-    # Omitted fields will keep their current values, omitted channel-indices
-    # will be turned off.
+TEST_HELP = """Test that underlying pixel data is available
+    
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+    
+    Output:
+    <Status>: <Pixels ID> <Time (in sec) to load the thumbnail> \
+<Error details, if any>
 
-    bin/omero render set --copy Screen:1 <YAML or JSON file>
-    # Equivalent to calling set for a single image followed by calling copy
-    # for all the remaining images in the collection, using the first image
-    # as the source. Note using this flag may have different results from not
-    # using it if the images had different settings to begin with and you are
-    # only overriding a subset of the settings (all images will end up with
-    # the same full rendering settings).
-
-    bin/omero render set --skipthumbs ...
-    # Update rendering settings but don't regenerate thumbnails.
-
-    # %(COPY)s
-    bin/omero render copy RenderingDef:1 Image:123
-    bin/omero render copy Image:456: Image:789
-    bin/omero render copy Image:456: Image:222 Image:333
-    bin/omero render copy Image:456: Plate:1
-    bin/omero render copy Image:456: Screen:2
-    bin/omero render copy Image:456: Dataset:3
-""" % DESC
+    Where status is either ok, miss, fill, cancel, or fail.
+    
+    Examples:
+    bin/omero render test Image:1 
+"""
 
 
 def _set_if_not_none(dictionary, k, v):
@@ -237,31 +270,27 @@ class RenderControl(BaseControl):
     def _configure(self, parser):
         parser.add_login_arguments()
         sub = parser.sub()
-        info = parser.add(sub, self.info, DESC["INFO"])
-        copy = parser.add(sub, self.copy, DESC["COPY"])
-        set_cmd = parser.add(sub, self.set, DESC["SET"])
-        edit = parser.add(sub, self.edit, DESC["EDIT"])
-        test = parser.add(sub, self.test, DESC["TEST"])
+        info = parser.add(sub, self.info, INFO_HELP)
+        copy = parser.add(sub, self.copy, COPY_HELP)
+        set_cmd = parser.add(sub, self.set, SET_HELP)
+        edit = parser.add(sub, self.edit, EDIT_HELP)
+        test = parser.add(sub, self.test, TEST_HELP)
 
         render_type = ProxyStringType("Image")
-        render_help = ("rendering def source of form <object>:<id>. "
-                       "Image is assumed if <object>: is omitted.")
+        src_help = ("Rendering settings source")
 
-        for x in (info, copy, set_cmd, edit, test):
-            x.add_argument("object", type=render_type, help=render_help)
+        for x in (info, copy, test):
+            x.add_argument("object", type=render_type, help=src_help)
 
-        set_cmd.add_argument(
-            "--copy", help="Batch edit images by copying rendering settings",
-            action="store_true")
-
-        edit.add_argument(
-            "--copy", help="Batch edit images by copying rendering settings",
-            action="store_true")
+        tgt_help = ("Objects to apply the rendering settings to")
+        for x in (set_cmd, edit):
+            x.add_argument("object", type=render_type, help=tgt_help,
+                           nargs="+")
 
         for x in (copy, set_cmd, edit):
             x.add_argument(
-                "--skipthumbs", help="Don't re-generate thumbnails",
-                action="store_true")
+                "--skipthumbs", help="Do not regenerate thumbnails "
+                                     "immediately", action="store_true")
 
         output_formats = ['plain'] + list(
             pydict_text_io.get_supported_formats())
@@ -269,14 +298,16 @@ class RenderControl(BaseControl):
             "--style", choices=output_formats, default='plain',
             help="Output format")
 
-        copy.add_argument("target", type=render_type, help=render_help,
+        copy.add_argument("target", type=render_type, help=tgt_help,
                           nargs="+")
         set_cmd.add_argument(
             "channels",
-            help="Rendering definition, local file or OriginalFile:ID")
+            help="Local file or OriginalFile:ID which specifies the "
+                 "rendering settings")
         edit.add_argument(
             "channels",
-            help="Rendering definition, local file or OriginalFile:ID")
+            help="Local file or OriginalFile:ID which specifies the "
+                 "rendering settings")
 
         test.add_argument(
             "--force", action="store_true",
@@ -395,6 +426,9 @@ class RenderControl(BaseControl):
                 self.ctx.err("Error: Image:%s" % missing)
                 del batch[missing]
 
+            self.ctx.out("Rendering settings successfully copied to %d images."
+                         % len(rv[True]))
+
             if not skipthumbs:
                 self._generate_thumbs(batch.values())
 
@@ -447,6 +481,7 @@ class RenderControl(BaseControl):
 
         try:
             greyscale = data['greyscale']
+            print 'greyscale=%s' % data['greyscale']
         except KeyError:
             greyscale = None
 
@@ -457,16 +492,29 @@ class RenderControl(BaseControl):
         for (i, c) in newchannels.iteritems():
             if c.label:
                 namedict[i] = c.label
-            if not c.active:
-                continue
-            cindices.append(i)
+            if c.active is False:
+                cindices.append(-i)
+            else:
+                cindices.append(i)
             rangelist.append([c.min, c.max])
             colourlist.append(c.color)
 
         iids = []
         for img in self.render_images(gateway, args.object, batch=1):
             iids.append(img.id)
-            img.setActiveChannels(
+
+            # TODO: Remove again once there's an appropriate gateway method
+            # Workaround: Calling set_active_channels would disable
+            # channels which are not specified.
+            imgChannels = img.getChannels()
+            for c in range(len(imgChannels)):
+                if (c+1) not in cindices and -(c+1) not in cindices\
+                        and imgChannels[c].isActive():
+                    cindices.append(c+1)
+                    rangelist.append([None, None])
+                    colourlist.append(None)
+
+            img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
             if greyscale is not None:
                 if greyscale:
@@ -479,15 +527,6 @@ class RenderControl(BaseControl):
                 "Updated rendering settings for Image:%s" % img.id)
             if not args.skipthumbs:
                 self._generate_thumbs([img])
-
-            if args.copy:
-                # Edit first image only, copy to rest
-                # Don't close source image until outer
-                # loop is done.
-                self._copy_single(gateway,
-                                  img, args.object,
-                                  args.skipthumbs)
-                break
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
