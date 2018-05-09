@@ -300,14 +300,15 @@ class RenderControl(BaseControl):
 
         copy.add_argument("target", type=render_type, help=tgt_help,
                           nargs="+")
-        set_cmd.add_argument(
-            "channels",
-            help="Local file or OriginalFile:ID which specifies the "
-                 "rendering settings")
-        edit.add_argument(
-            "channels",
-            help="Local file or OriginalFile:ID which specifies the "
-                 "rendering settings")
+
+        for x in (set_cmd, edit):
+            x.add_argument(
+                "--disable", help="Disable non specified channels ",
+                action="store_true")
+            x.add_argument(
+                "channels",
+                help="Local file or OriginalFile:ID which specifies the "
+                     "rendering settings")
 
         test.add_argument(
             "--force", action="store_true",
@@ -503,16 +504,16 @@ class RenderControl(BaseControl):
         for img in self.render_images(gateway, args.object, batch=1):
             iids.append(img.id)
 
-            # TODO: Remove again once there's an appropriate gateway method
-            # Workaround: Calling set_active_channels would disable
-            # channels which are not specified.
-            img_channels = img.getChannels()
-            for c in range(len(img_channels)):
-                if (c+1) not in cindices and -(c+1) not in cindices\
-                        and img_channels[c].isActive():
-                    cindices.append(c+1)
-                    rangelist.append([None, None])
-                    colourlist.append(None)
+            if not args.disable:
+                # Calling set_active_channels will disable channels which
+                # are not specified, so have to add them explicitly
+                imgChannels = img.getChannels()
+                for c in range(len(imgChannels)):
+                    if (c+1) not in cindices and -(c+1) not in cindices\
+                            and imgChannels[c].isActive():
+                        cindices.append(c+1)
+                        rangelist.append([None, None])
+                        colourlist.append(None)
 
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
