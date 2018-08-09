@@ -506,10 +506,10 @@ class RenderControl(BaseControl):
             # TODO: Remove again once there's an appropriate gateway method
             # Workaround: Calling set_active_channels would disable
             # channels which are not specified.
-            imgChannels = img.getChannels()
-            for c in range(len(imgChannels)):
+            img_channels = img.getChannels()
+            for c in range(len(img_channels)):
                 if (c+1) not in cindices and -(c+1) not in cindices\
-                        and imgChannels[c].isActive():
+                        and img_channels[c].isActive():
                     cindices.append(c+1)
                     rangelist.append([None, None])
                     colourlist.append(None)
