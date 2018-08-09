@@ -38,24 +38,24 @@ from omero import UnloadedEntityException
 HELP = "Tools for working with rendering settings"
 
 INFO_HELP = """Show details of a rendering setting
-    
+
     The syntax for specifying objects is: <object>:<id>
     <object> can be Image, Project, Dataset, Plate or Screen.
     Image is assumed if <object>: is omitted
-    
+
     Examples:
     bin/omero render info Image:123
 """
 
 COPY_HELP = """Copy rendering setting to multiple objects
-    
+
     The syntax for specifying objects is: <object>:<id>
     <object> can be Image, Project, Dataset, Plate or Screen.
     Image is assumed if <object>: is omitted
-    
+
     The first argument is the source of the rendering settings,
     the following arguments are the targets.
-    
+
     Examples:
     bin/omero render copy Image:456 Image:222 Image:333
     bin/omero render copy Image:456 Plate:1
@@ -69,12 +69,12 @@ SET_HELP = """Set rendering settings
     The syntax for specifying objects is: <object>:<id>
     <object> can be Image, Project, Dataset, Plate or Screen.
     Image is assumed if <object>: is omitted
-    
+
     Examples:
     bin/omero render set Image:1 settings.json
     bin/omero render set Dataset:1 settings.yml
-    
-    # where the input file (YAML or JSON) contains a top-level channels 
+
+    # where the input file (YAML or JSON) contains a top-level channels
     # key (required), and an optional top-level greyscale key (True: greyscale,
     # False: color). Channel elements are index:dictionaries of the form:
 
@@ -88,7 +88,7 @@ SET_HELP = """Set rendering settings
       <index>:
         ...
     greyscale: <(bool)>
-    
+
     For example:
     channels:
       1:
@@ -100,28 +100,28 @@ SET_HELP = """Set rendering settings
       2:
         color: "00FF00"
       ...
-      
+
     # Omitted fields will keep their current values.
     # If the file specifies to turn off a channel (active: False) then the
     # other settings like min, max, and color which might be specified for
-    # that channel in the same file will be ignored, however the channel 
+    # that channel in the same file will be ignored, however the channel
     # name (label) is still taken into account.
 """
 
 TEST_HELP = """Test that underlying pixel data is available
-    
+
     The syntax for specifying objects is: <object>:<id>
     <object> can be Image, Project, Dataset, Plate or Screen.
     Image is assumed if <object>: is omitted
-    
+
     Output:
     <Status>: <Pixels ID> <Time (in sec) to load the thumbnail> \
 <Error details, if any>
 
     Where status is either ok, miss, fill, cancel, or fail.
-    
+
     Examples:
-    bin/omero render test Image:1 
+    bin/omero render test Image:1
 """
 
 
