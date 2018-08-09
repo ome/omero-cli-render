@@ -9,7 +9,7 @@ services:
   - docker
 
 before_install:
-  - git clone --recurse-submodules git://github.com/openmicroscopy/omero-test-infra .omero
+  - git clone --recurse-submodules git://github.com/sbesson/omero-test-infra -b cli_pycheck .omero
 
 script:
   - .omero/cli-docker
