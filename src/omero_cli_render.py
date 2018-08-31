@@ -507,10 +507,10 @@ class RenderControl(BaseControl):
             if not args.disable:
                 # Calling set_active_channels will disable channels which
                 # are not specified, so have to add them explicitly
-                imgChannels = img.getChannels()
-                for c in range(len(imgChannels)):
+                imgchannels = img.getChannels()
+                for c in range(len(imgchannels)):
                     if (c+1) not in cindices and -(c+1) not in cindices\
-                            and imgChannels[c].isActive():
+                            and imgchannels[c].isActive():
                         cindices.append(c+1)
                         rangelist.append([None, None])
                         colourlist.append(None)
