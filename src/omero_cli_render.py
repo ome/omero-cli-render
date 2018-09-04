@@ -397,11 +397,13 @@ class RenderControl(BaseControl):
                         "Output styles not supported for multiple images")
                 self.ctx.out(pydict_text_io.dump(ro.to_dict(), args.style))
                 first = False
+        gateway.close(hard=False)
 
     def copy(self, args):
         client = self.ctx.conn(args)
         gateway = BlitzGateway(client_obj=client)
         self._copy(gateway, args.object, args.target, args.skipthumbs)
+        gateway.close(hard=False)
 
     def _copy(self, gateway, obj, target, skipthumbs):
         for src_img in self.render_images(gateway, obj, batch=1):
@@ -535,6 +537,8 @@ class RenderControl(BaseControl):
         if namedict:
             self._update_channel_names(gateway, iids, namedict)
 
+        gateway.close(hard=False)
+
     def edit(self, args):
         self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
 
@@ -545,6 +549,7 @@ class RenderControl(BaseControl):
         for img in self.render_images(gateway, args.object, batch=1):
             self.test_per_pixel(
                 client, img.getPrimaryPixels().id, args.force, args.thumb)
+        gateway.close(hard=False)
 
     def test_per_pixel(self, client, pixid, force, thumb):
         ctx = {'omero.group': '-1'}
@@ -592,7 +597,6 @@ class RenderControl(BaseControl):
         stop = time.time()
         self.ctx.out("%s %s %s %s" % (msg, pixid, stop-start, error))
         return msg
-
 
 try:
     register("render", RenderControl, HELP)
