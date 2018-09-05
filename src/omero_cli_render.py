@@ -267,37 +267,33 @@ class RenderObject(object):
         return d
 
 
+def gateway_required(func):
+    """
+    Decorator which initializes a client (self.client),
+    a BlitzGateway (self.gateway), and makes sure that
+    all services of the Blitzgateway are closed again.
+    """
+    @wraps(func)
+    def _wrapper(self, *args, **kwargs):
+        self.client = self.ctx.conn(*args)
+        self.gateway = BlitzGateway(client_obj=self.client)
+
+        value = func(self, *args, **kwargs)
+
+        try:
+            if self.gateway is not None:
+                self.gateway.close(hard=False)
+                self.gateway = None
+                self.client = None
+        finally:
+            return value
+    return _wrapper
+
+
 class RenderControl(BaseControl):
 
     gateway = None
     client = None
-
-    def gateway_required(func):
-        """
-        Decorator which initializes a client (self.client),
-        a BlitzGateway (self.gateway), and makes sure that
-        all services of the Blitzgateway are closed again.
-        """
-        @wraps(func)
-        def _wrapper(self, *args, **kwargs):
-            try:
-                self.client = self.ctx.conn(*args)
-                self.gateway = BlitzGateway(client_obj=self.client)
-            except Exception as e:
-                raise e
-
-            value = func(self, *args, **kwargs)
-
-            try:
-                if self.gateway is not None:
-                    self.gateway.close(hard=False)
-                    self.gateway = None
-                    self.client = None
-            except Exception as e:
-                raise e
-            finally:
-                return value
-        return _wrapper
 
     def _configure(self, parser):
         parser.add_login_arguments()
