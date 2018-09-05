@@ -21,6 +21,8 @@
 import sys
 import time
 
+from functools import wraps
+
 from omero.cli import BaseControl
 from omero.cli import CLI
 from omero.cli import ProxyStringType
@@ -267,6 +269,36 @@ class RenderObject(object):
 
 class RenderControl(BaseControl):
 
+    gateway = None
+    client = None
+
+    def gateway_required(func):
+        """
+        Decorator which initializes a client (self.client),
+        a BlitzGateway (self.gateway), and makes sure that
+        all services of the Blitzgateway are closed again.
+        """
+        @wraps(func)
+        def _wrapper(self, *args, **kwargs):
+            try:
+                self.client = self.ctx.conn(*args)
+                self.gateway = BlitzGateway(client_obj=self.client)
+            except Exception as e:
+                raise e
+
+            value = func(self, *args, **kwargs)
+
+            try:
+                if self.gateway is not None:
+                    self.gateway.close(hard=False)
+                    self.gateway = None
+                    self.client = None
+            except Exception as e:
+                raise e
+            finally:
+                return value
+        return _wrapper
+
     def _configure(self, parser):
         parser.add_login_arguments()
         sub = parser.sub()
@@ -382,11 +414,10 @@ class RenderControl(BaseControl):
         else:
             self.ctx.die(111, "TBD: %s" % object.__class__.__name__)
 
+    @gateway_required
     def info(self, args):
-        client = self.ctx.conn(args)
-        gateway = BlitzGateway(client_obj=client)
         first = True
-        for img in self.render_images(gateway, args.object, batch=1):
+        for img in self.render_images(self.gateway, args.object, batch=1):
             ro = RenderObject(img)
             if args.style == 'plain':
                 self.ctx.out(ro)
@@ -397,13 +428,10 @@ class RenderControl(BaseControl):
                         "Output styles not supported for multiple images")
                 self.ctx.out(pydict_text_io.dump(ro.to_dict(), args.style))
                 first = False
-        gateway.close(hard=False)
 
+    @gateway_required
     def copy(self, args):
-        client = self.ctx.conn(args)
-        gateway = BlitzGateway(client_obj=client)
-        self._copy(gateway, args.object, args.target, args.skipthumbs)
-        gateway.close(hard=False)
+        self._copy(self.gateway, args.object, args.target, args.skipthumbs)
 
     def _copy(self, gateway, obj, target, skipthumbs):
         for src_img in self.render_images(gateway, obj, batch=1):
@@ -453,12 +481,11 @@ class RenderControl(BaseControl):
             self.ctx.dbg("Image:%s got thumbnail in %2.2fs" % (
                 img.id, stop - start))
 
+    @gateway_required
     def set(self, args):
-        client = self.ctx.conn(args)
-        gateway = BlitzGateway(client_obj=client)
         newchannels = {}
         data = pydict_text_io.load(
-            args.channels, session=client.getSession())
+            args.channels, session=self.client.getSession())
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % args.channels)
 
@@ -502,7 +529,7 @@ class RenderControl(BaseControl):
             colourlist.append(c.color)
 
         iids = []
-        for img in self.render_images(gateway, args.object, batch=1):
+        for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
 
             # TODO: Remove again once there's an appropriate gateway method
@@ -535,21 +562,17 @@ class RenderControl(BaseControl):
                          (args.object.__class__.__name__, args.object.id._val))
 
         if namedict:
-            self._update_channel_names(gateway, iids, namedict)
-
-        gateway.close(hard=False)
+            self._update_channel_names(self.gateway, iids, namedict)
 
     def edit(self, args):
         self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
 
+    @gateway_required
     def test(self, args):
-        client = self.ctx.conn(args)
-        gateway = BlitzGateway(client_obj=client)
-        gateway.SERVICE_OPTS.setOmeroGroup('-1')
-        for img in self.render_images(gateway, args.object, batch=1):
+        self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
+        for img in self.render_images(self.gateway, args.object, batch=1):
             self.test_per_pixel(
-                client, img.getPrimaryPixels().id, args.force, args.thumb)
-        gateway.close(hard=False)
+                self.client, img.getPrimaryPixels().id, args.force, args.thumb)
 
     def test_per_pixel(self, client, pixid, force, thumb):
         ctx = {'omero.group': '-1'}
@@ -597,6 +620,7 @@ class RenderControl(BaseControl):
         stop = time.time()
         self.ctx.out("%s %s %s %s" % (msg, pixid, stop-start, error))
         return msg
+
 
 try:
     register("render", RenderControl, HELP)
