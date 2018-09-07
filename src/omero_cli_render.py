@@ -278,15 +278,13 @@ def gateway_required(func):
         self.client = self.ctx.conn(*args)
         self.gateway = BlitzGateway(client_obj=self.client)
 
-        value = func(self, *args, **kwargs)
-
         try:
+            return func(self, *args, **kwargs)
+        finally:
             if self.gateway is not None:
                 self.gateway.close(hard=False)
                 self.gateway = None
                 self.client = None
-        finally:
-            return value
     return _wrapper
 
 
