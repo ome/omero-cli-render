@@ -531,7 +531,7 @@ class RenderControl(BaseControl):
             reactivatechannels = []
             if not args.disable:
                 # Calling set_active_channels will disable channels which
-                # are not specified, have to keep track of them and 
+                # are not specified, have to keep track of them and
                 # re-activate them later again
                 imgchannels = img.getChannels()
                 for ci, ch in enumerate(imgchannels, 1):
