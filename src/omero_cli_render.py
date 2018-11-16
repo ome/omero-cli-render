@@ -164,8 +164,8 @@ class ChannelObject(object):
         self.color = d.get('color', None)
         self.min = float(d['min']) if 'min' in d else None
         self.max = float(d['max']) if 'max' in d else None
-        self.start = None
-        self.end = None
+        self.start = float(d['start']) if 'start' in d else None
+        self.end = float(d['end']) if 'end' in d else None
         self.active = bool(d.get('active', True))
 
     def __str__(self):
@@ -514,29 +514,30 @@ class RenderControl(BaseControl):
         rangelist = []
         colourlist = []
         for (i, c) in newchannels.iteritems():
+            i += 1
             if c.label:
                 namedict[i] = c.label
             if c.active is False:
                 cindices.append(-i)
             else:
                 cindices.append(i)
-            rangelist.append([c.min, c.max])
+            rangelist.append([c.start, c.end])
             colourlist.append(c.color)
 
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
 
+            reactivatechannels = []
             if not args.disable:
                 # Calling set_active_channels will disable channels which
-                # are not specified, so have to add them explicitly
+                # are not specified, have to keep track of them and 
+                # re-activate them later again
                 imgchannels = img.getChannels()
-                for c in range(len(imgchannels)):
-                    if (c+1) not in cindices and -(c+1) not in cindices\
-                            and imgchannels[c].isActive():
-                        cindices.append(c+1)
-                        rangelist.append([None, None])
-                        colourlist.append(None)
+                for ci, ch in enumerate(imgchannels, 1):
+                    if ci not in cindices and -ci not in cindices\
+                            and ch.isActive():
+                        reactivatechannels.append(ci)
 
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
@@ -545,6 +546,9 @@ class RenderControl(BaseControl):
                     img.setGreyscaleRenderingModel()
                 else:
                     img.setColorRenderingModel()
+
+            if len(reactivatechannels) > 0:
+                img.set_active_channels(reactivatechannels)
 
             img.saveDefaults()
             self.ctx.dbg(
