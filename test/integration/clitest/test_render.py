@@ -115,26 +115,26 @@ class TestRender(CLITest):
         channels[1] = {
             'label': self.uuid(),
             'color': '123456',
-            'min': 11,
-            'max': 22,
+            'start': 11,
+            'end': 22,
         }
         channels[2] = {
             'label': self.uuid(),
             'color': '789ABC',
-            'min': 33,
-            'max': 44,
+            'start': 33,
+            'end': 44,
         }
         channels[3] = {
             'label': self.uuid(),
             'color': 'DEF012',
-            'min': 55,
-            'max': 66,
+            'start': 55,
+            'end': 66,
         }
         channels[4] = {
             'label': self.uuid(),
             'color': '345678',
-            'min': 77,
-            'max': 88,
+            'start': 77,
+            'end': 88,
         }
 
         for k in xrange(sizec, 4):
@@ -148,8 +148,8 @@ class TestRender(CLITest):
     def assert_channel_rdef(self, channel, rdef):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
-        assert channel.getWindowStart() == rdef['min']
-        assert channel.getWindowEnd() == rdef['max']
+        assert channel.getWindowStart() == rdef['start']
+        assert channel.getWindowEnd() == rdef['end']
 
     def assert_image_rmodel(self, img, greyscale):
         assert img.isGreyscaleRenderingModel() == greyscale

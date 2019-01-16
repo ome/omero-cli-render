@@ -514,7 +514,6 @@ class RenderControl(BaseControl):
         rangelist = []
         colourlist = []
         for (i, c) in newchannels.iteritems():
-            i += 1
             if c.label:
                 namedict[i] = c.label
             if c.active is False:
