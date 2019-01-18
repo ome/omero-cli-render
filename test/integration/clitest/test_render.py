@@ -161,6 +161,18 @@ class TestRender(CLITest):
     # rendering tests
     # ========================================================================
 
+    @pytest.mark.permissions
+    def test_cross_group(self, capsys):
+        self.create_image(sizec=1)
+        login = self.root_login_args()
+        # Run test as self and as root
+        self.cli.invoke(self.args + ["test", self.imageid], strict=True)
+        self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
+        out, err = capsys.readouterr()
+        lines = out.split("\n")
+        assert "ok" in lines[0]
+        assert "ok" in lines[1]
+
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     def test_non_existing_image(self, target_name, tmpdir):
         target = SUPPORTED[target_name]
@@ -260,15 +272,3 @@ class TestRender(CLITest):
             self.assert_image_rmodel(img, expected_greyscale)
             # img._closeRE()
         # assert not gw._assert_unregistered("testEditSingleC")
-
-    @pytest.mark.permissions
-    def test_cross_group(self, capsys):
-        self.create_image(sizec=1)
-        login = self.root_login_args()
-        # Run test as self and as root
-        self.cli.invoke(self.args + ["test", self.imageid], strict=True)
-        self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
-        out, err = capsys.readouterr()
-        lines = out.split("\n")
-        assert "ok" in lines[0]
-        assert "ok" in lines[1]
