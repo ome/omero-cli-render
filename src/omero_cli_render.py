@@ -136,7 +136,7 @@ def _set_if_not_none(dictionary, k, v):
         dictionary[k] = v
 
 
-def _getVersion(self, data):
+def _getversion(self, data):
     """ Returns the version of the rendering settings format.
     If the version cannot be determined 'self.ctx.die' will
     be called.
@@ -188,7 +188,7 @@ class ChannelObject(object):
         self.active = channel.isActive()
 
     def init_from_dict(self, d):
-        version = _getVersion(d)
+        version = _getversion(d)
         self.emWave = None
         self.label = d.get('label', None)
         self.color = d.get('color', None)
