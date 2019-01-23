@@ -136,7 +136,7 @@ def _set_if_not_none(dictionary, k, v):
         dictionary[k] = v
 
 
-def _getversion(self, data):
+def _getversion(data):
     """ Returns the version of the rendering settings format.
     If the version cannot be determined 'self.ctx.die' will
     be called.
