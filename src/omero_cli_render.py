@@ -126,6 +126,9 @@ TEST_HELP = """Test that underlying pixel data is available
     bin/omero render test Image:1
 """
 
+# Current version for specifying rendering settings
+currentSpecVersion = 2
+
 
 def _set_if_not_none(dictionary, k, v):
     if v is not None:
@@ -164,8 +167,8 @@ class ChannelObject(object):
         self.color = d.get('color', None)
         self.min = float(d['min']) if 'min' in d else None
         self.max = float(d['max']) if 'max' in d else None
-        self.start = None
-        self.end = None
+        self.start = float(d['start']) if 'start' in d else None
+        self.end = float(d['end']) if 'end' in d else None
         self.active = bool(d.get('active', True))
 
     def __str__(self):
@@ -260,8 +263,9 @@ class RenderObject(object):
         """
         d = {}
         chs = {}
-        for idx, ch in enumerate(self.channels):
+        for idx, ch in enumerate(self.channels, 1):
             chs[idx] = ch.to_dict()
+        d['version'] = currentSpecVersion
         d['channels'] = chs
         d['greyscale'] = True if self.model == 'greyscale' else False
         return d
@@ -484,6 +488,23 @@ class RenderControl(BaseControl):
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % args.channels)
 
+        # Previously min/max was used to set the channel window start/end
+        # From version 2 on start/end will be used.
+        if 'version' not in data:
+            for chindex, chdict in data['channels'].iteritems():
+                if ('start' in chdict or 'end' in chdict) and\
+                        ('min' in chdict or 'max' in chdict):
+                    self.ctx.die(124, "ERROR: start/end and min/max specified,"
+                                      " cannot determine version.")
+                if 'start' in chdict or 'end' in chdict:
+                    version = 2
+                    break
+                if 'min' in chdict or 'max' in chdict:
+                    version = 1
+                    break
+        else:
+            version = data['version']
+
         for chindex, chdict in data['channels'].iteritems():
             try:
                 cindex = int(chindex)
@@ -496,6 +517,9 @@ class RenderControl(BaseControl):
                 cobj = ChannelObject(chdict)
                 if (cobj.min is None) != (cobj.max is None):
                     raise Exception('Both or neither of min and max required')
+                if (cobj.start is None) != (cobj.end is None):
+                    raise Exception('Both or neither of start and end '
+                                    'required')
                 newchannels[cindex] = cobj
                 print '%d:%s' % (cindex, cobj)
             except Exception as e:
@@ -520,23 +544,25 @@ class RenderControl(BaseControl):
                 cindices.append(-i)
             else:
                 cindices.append(i)
-            rangelist.append([c.min, c.max])
+            start = c.start if version > 1 else c.min
+            end = c.end if version > 1 else c.max
+            rangelist.append([start, end])
             colourlist.append(c.color)
 
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
 
+            reactivatechannels = []
             if not args.disable:
                 # Calling set_active_channels will disable channels which
-                # are not specified, so have to add them explicitly
+                # are not specified, have to keep track of them and
+                # re-activate them later again
                 imgchannels = img.getChannels()
-                for c in range(len(imgchannels)):
-                    if (c+1) not in cindices and -(c+1) not in cindices\
-                            and imgchannels[c].isActive():
-                        cindices.append(c+1)
-                        rangelist.append([None, None])
-                        colourlist.append(None)
+                for ci, ch in enumerate(imgchannels, 1):
+                    if ci not in cindices and -ci not in cindices\
+                            and ch.isActive():
+                        reactivatechannels.append(ci)
 
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
@@ -545,6 +571,9 @@ class RenderControl(BaseControl):
                     img.setGreyscaleRenderingModel()
                 else:
                     img.setColorRenderingModel()
+
+            if len(reactivatechannels) > 0:
+                img.set_active_channels(reactivatechannels)
 
             img.saveDefaults()
             self.ctx.dbg(

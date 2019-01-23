@@ -110,31 +110,33 @@ class TestRender(CLITest):
             return imgs
         raise Exception('Unknown target: %s' % target)
 
-    def get_render_def(self, sizec=4, greyscale=None):
+    def get_render_def(self, sizec=4, greyscale=None, version=2):
         channels = {}
+        start = 'start' if version > 1 else 'min'
+        end = 'end' if version > 1 else 'max'
         channels[1] = {
             'label': self.uuid(),
             'color': '123456',
-            'min': 11,
-            'max': 22,
+            start: 11,
+            end: 22,
         }
         channels[2] = {
             'label': self.uuid(),
             'color': '789ABC',
-            'min': 33,
-            'max': 44,
+            start: 33,
+            end: 44,
         }
         channels[3] = {
             'label': self.uuid(),
             'color': 'DEF012',
-            'min': 55,
-            'max': 66,
+            start: 55,
+            end: 66,
         }
         channels[4] = {
             'label': self.uuid(),
             'color': '345678',
-            'min': 77,
-            'max': 88,
+            start: 77,
+            end: 88,
         }
 
         for k in xrange(sizec, 4):
@@ -145,17 +147,31 @@ class TestRender(CLITest):
             d['greyscale'] = greyscale
         return d
 
-    def assert_channel_rdef(self, channel, rdef):
+    def assert_channel_rdef(self, channel, rdef, version):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
-        assert channel.getWindowStart() == rdef['min']
-        assert channel.getWindowEnd() == rdef['max']
+        start = rdef['start'] if version > 1 else rdef['min']
+        end = rdef['end'] if version > 1 else rdef['max']
+        assert channel.getWindowStart() == start
+        assert channel.getWindowEnd() == end
 
     def assert_image_rmodel(self, img, greyscale):
         assert img.isGreyscaleRenderingModel() == greyscale
 
     # rendering tests
     # ========================================================================
+
+    @pytest.mark.permissions
+    def test_cross_group(self, capsys):
+        self.create_image(sizec=1)
+        login = self.root_login_args()
+        # Run test as self and as root
+        self.cli.invoke(self.args + ["test", self.imageid], strict=True)
+        self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
+        out, err = capsys.readouterr()
+        lines = out.split("\n")
+        assert "ok" in lines[0]
+        assert "ok" in lines[1]
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     def test_non_existing_image(self, target_name, tmpdir):
@@ -224,12 +240,14 @@ class TestRender(CLITest):
     # it with sizec and greyscale parameters
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
     @pytest.mark.parametrize('greyscale', [None, True, False])
-    def test_set_single_channel(self, target_name, greyscale, tmpdir):
+    @pytest.mark.parametrize('version', [1, 2])
+    def test_set_single_channel(self, target_name, greyscale, tmpdir, version):
         sizec = 1
         # 1 channel so should default to greyscale model
         expected_greyscale = ((greyscale is None) or greyscale)
         self.create_image(sizec=sizec)
-        rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
+        rd = self.get_render_def(sizec=sizec, greyscale=greyscale,
+                                 version=version)
         rdfile = tmpdir.join('render-test-editsinglec.json')
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
@@ -249,19 +267,8 @@ class TestRender(CLITest):
             channels = img.getChannels()
             assert len(channels) == sizec
             for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
+                self.assert_channel_rdef(channels[c], rd['channels'][c + 1],
+                                         version)
             self.assert_image_rmodel(img, expected_greyscale)
             # img._closeRE()
         # assert not gw._assert_unregistered("testEditSingleC")
-
-    @pytest.mark.permissions
-    def test_cross_group(self, capsys):
-        self.create_image(sizec=1)
-        login = self.root_login_args()
-        # Run test as self and as root
-        self.cli.invoke(self.args + ["test", self.imageid], strict=True)
-        self.cli.invoke(login + ["render", "test", self.imageid], strict=True)
-        out, err = capsys.readouterr()
-        lines = out.split("\n")
-        assert "ok" in lines[0]
-        assert "ok" in lines[1]
