@@ -1,4 +1,40 @@
-0.1 (October 2017)
-------------------
+CHANGES
+=======
 
-- Initial release
+
+0.4.0a1
+-------
+
+* Drop Python 2.6 support [#17](https://github.com/ome/omero-cli-render/pull/17)
+* CLI render format version 2: use start/end instead of min/max [#15](https://github.com/ome/omero-cli-render/pull/15)
+
+0.3.1
+-----
+
+* Add `--disable` option to `render set` [#9](https://github.com/ome/omero-cli-render/pull/9)
+* Close services [#13](https://github.com/ome/omero-cli-render/pull/13)
+
+0.3.0
+-----
+
+* Remove `--copy` flag of `render set` [#8](https://github.com/ome/omero-cli-render/pull/8)
+* Fix auto-disabling of channels if not specified in the YML/JSON [#8](https://github.com/ome/omero-cli-render/pull/8)
+* Improve command-line documentation [#8](https://github.com/ome/omero-cli-render/pull/8)
+
+0.2.0
+-----
+
+* Rename `render edit` subcommand as `render set` and deprecate it [#7](https://github.com/ome/omero-cli-render/pull/7)
+* Fix `render info` subcommand [#7](https://github.com/ome/omero-cli-render/pull/7)
+* Allow rendering settings to be set at the Project/Dataset level [#7](https://github.com/ome/omero-cli-render/pull/7)
+
+0.1.1
+-----
+
+* Use cross-group querying and improve documentation of `render test` [#6](https://github.com/ome/omero-cli-render/pull/6)
+
+0.1.0
+-----
+
+* Extraction of the CLI render plugin from the openmicroscopy/openmicroscopy
+* Initial PyPI release
