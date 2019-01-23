@@ -137,9 +137,8 @@ def _set_if_not_none(dictionary, k, v):
 
 
 def _getversion(data):
-    """ Returns the version of the rendering settings format.
-    If the version cannot be determined 'self.ctx.die' will
-    be called.
+    """ Returns the version of the rendering settings format
+    or 0 if it cannot be determined.
 
     Arguments:
     data -- The rendering settings as dictionary
@@ -151,16 +150,14 @@ def _getversion(data):
         for chindex, chdict in data['channels'].iteritems():
             if ('start' in chdict or 'end' in chdict) and\
                ('min' in chdict or 'max' in chdict):
-                self.ctx.die(124, "ERROR: start/end and min/max specified,"
-                                  " cannot determine version.")
+                return 0
             if 'start' in chdict or 'end' in chdict:
                 return 2
             if 'min' in chdict or 'max' in chdict:
                 return 1
     else:
         return data['version']
-
-    self.ctx.die(124, "ERROR: Either start/end or min/max must be specified.")
+    return 0
 
 
 class ChannelObject(object):
@@ -189,6 +186,10 @@ class ChannelObject(object):
 
     def init_from_dict(self, d):
         version = _getversion(d)
+        if version == 0:
+            self.ctx.die(124, "ERROR: Cannot determine version. Specify"
+                              "version or use either start/end or min/max"
+                              " (not both).")
         self.emWave = None
         self.label = d.get('label', None)
         self.color = d.get('color', None)
