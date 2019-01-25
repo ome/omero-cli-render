@@ -29,14 +29,8 @@ from omero.gateway import BlitzGateway
 
 
 # TODO: rdefid, tbid
-SUPPORTED = {
-    "idonly": "-1",
-    "imageid": "Image:-1",
-    "plateid": "Plate:-1",
-    "screenid": "Screen:-1",
-    "datasetid": "Dataset:-1",
-    "projectid": "Project:-1"
-}
+SUPPORTED = [
+    "idonly", "imageid", "plateid", "screenid", "datasetid", "projectid"]
 
 
 class TestRender(CLITest):
@@ -45,43 +39,59 @@ class TestRender(CLITest):
         super(TestRender, self).setup_method(method)
         self.cli.register("render", RenderControl, "TEST")
         self.args += ["render"]
+        self.idonly = "-1"
+        self.imageid = "Image:-1"
+        self.plateid = "Plate:-1"
+        self.screenid = "Screen:-1"
+        self.datasetid = "Dataset:-1"
+        self.projectid = "Project:-1"
 
-    def create_image(self, sizec=4):
+    def create_image(self, sizec=4, target_name=None):
         self.gw = BlitzGateway(client_obj=self.client)
-        self.plates = []
-        for plate in self.import_plates(client=self.client, fields=2,
-                                        sizeC=sizec, screens=1):
-            self.plates.append(self.gw.getObject("Plate", plate.id.val))
-        # Now pick the first Image
-        self.imgobj = list(self.plates[0].listChildren())[0].getImage(index=0)
-        self.idonly = "%s" % self.imgobj.id
-        self.imageid = "Image:%s" % self.imgobj.id
-        self.plateid = "Plate:%s" % self.plates[0].id
-        self.screenid = "Screen:%s" % self.plates[0].getParent().id
-        # And another one as the source for copies
-        self.source = list(self.plates[0].listChildren())[0].getImage(index=1)
-        self.source = "Image:%s" % self.source.id
-        # And for all the images, pre-load a thumbnail
-        for p in self.plates:
-            for w in p.listChildren():
-                for i in range(w.countWellSample()):
-                    img = w.getImage(index=i)
-                    img.getThumbnail(
-                        size=(96,), direct=False)
+        if target_name == "plateid" or target_name == "screenid":
+            self.plates = []
+            for plate in self.import_plates(client=self.client, fields=2,
+                                            sizeC=sizec, screens=1):
+                self.plates.append(self.gw.getObject("Plate", plate.id.val))
+            # Now pick the first Image
+            self.imgobj = list(
+                self.plates[0].listChildren())[0].getImage(index=0)
+            self.idonly = "%s" % self.imgobj.id
+            self.imageid = "Image:%s" % self.imgobj.id
+            self.plateid = "Plate:%s" % self.plates[0].id
+            self.screenid = "Screen:%s" % self.plates[0].getParent().id
+            # And another one as the source for copies
+            self.source = list(
+                self.plates[0].listChildren())[0].getImage(index=1)
+            self.source = "Image:%s" % self.source.id
 
-        # Create Project/Dataset hierarchy
-        project = self.make_project(client=self.client)
-        self.project = self.gw.getObject("Project", project.id.val)
-        dataset = self.make_dataset(client=self.client)
-        self.dataset = self.gw.getObject("Dataset", dataset.id.val)
-        self.projectid = "Project:%s" % self.project.id
-        self.datasetid = "Dataset:%s" % self.dataset.id
-        self.link(obj1=project, obj2=dataset)
-        images = self.import_fake_file(images_count=1, sizeC=sizec,
-                                       client=self.client)
-        self.link(obj1=dataset, obj2=images[0])
-        img = self.gw.getObject("Image", images[0].id.val)
-        img.getThumbnail(size=(96,), direct=False)
+            # And for all the images, pre-load a thumbnail
+            for p in self.plates:
+                for w in p.listChildren():
+                    for i in range(w.countWellSample()):
+                        img = w.getImage(index=i)
+                        img.getThumbnail(
+                            size=(96,), direct=False)
+        else:
+            images = self.import_fake_file(images_count=2, sizeC=sizec,
+                                           client=self.client)
+            self.idonly = "%s" % images[0].id.val
+            self.imageid = "Image:%s" % images[0].id.val
+            self.source = "Image:%s" % images[1].id.val
+            for image in images:
+                img = self.gw.getObject("Image", image.id.val)
+                img.getThumbnail(size=(96,), direct=False)
+
+        if target_name == "datasetid" or target_name == "projectid":
+            # Create Project/Dataset hierarchy
+            project = self.make_project(client=self.client)
+            self.project = self.gw.getObject("Project", project.id.val)
+            dataset = self.make_dataset(client=self.client)
+            self.dataset = self.gw.getObject("Dataset", dataset.id.val)
+            self.projectid = "Project:%s" % self.project.id
+            self.datasetid = "Dataset:%s" % self.dataset.id
+            self.link(obj1=project, obj2=dataset)
+            self.link(obj1=dataset, obj2=images)
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
@@ -173,16 +183,15 @@ class TestRender(CLITest):
         assert "ok" in lines[0]
         assert "ok" in lines[1]
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_non_existing_image(self, target_name, tmpdir):
-        target = SUPPORTED[target_name]
-        self.args += ["info", target]
+        self.args += ["info", getattr(self, target_name)]
         with pytest.raises(NonZeroReturnCode):
             self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_info(self, target_name, tmpdir):
-        self.create_image()
+        self.create_image(target_name=target_name)
         target = getattr(self, target_name)
         self.args += ["info", target]
         self.cli.invoke(self.args, strict=True)
@@ -195,14 +204,14 @@ class TestRender(CLITest):
         self.args += ['--style', style]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_copy(self, target_name, tmpdir):
-        self.create_image()
+        self.create_image(target_name=target_name)
         target = getattr(self, target_name)
         self.args += ["copy", self.source, target]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     @pytest.mark.broken(
         reason=('https://trello.com/c/lyyGuRow/'
                 '657-incorrect-logical-channels-in-clitest-importplates'))
@@ -214,7 +223,7 @@ class TestRender(CLITest):
         greyscale = None
         # 4 channels so should default to colour model
         expected_greyscale = False
-        self.create_image(sizec=sizec)
+        self.create_image(sizec=sizec, target_name=target_name)
         rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
         rdfile = tmpdir.join('render-test-edit.json')
         # Should work with json and yaml, but yaml is an optional dependency
@@ -238,14 +247,14 @@ class TestRender(CLITest):
 
     # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     @pytest.mark.parametrize('greyscale', [None, True, False])
     @pytest.mark.parametrize('version', [1, 2])
     def test_set_single_channel(self, target_name, greyscale, tmpdir, version):
         sizec = 1
         # 1 channel so should default to greyscale model
         expected_greyscale = ((greyscale is None) or greyscale)
-        self.create_image(sizec=sizec)
+        self.create_image(sizec=sizec, target_name=target_name)
         rd = self.get_render_def(sizec=sizec, greyscale=greyscale,
                                  version=version)
         rdfile = tmpdir.join('render-test-editsinglec.json')
