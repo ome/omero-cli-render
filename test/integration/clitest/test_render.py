@@ -214,12 +214,13 @@ class TestRender(CLITest):
 
     # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
-    @pytest.mark.parametrize('sizec', [1, 2, 3, 4])
+    @pytest.mark.parametrize('sizec', [1, 2, 4])
     @pytest.mark.parametrize('greyscale', [None, True, False])
     @pytest.mark.parametrize('version', [1, 2])
     def test_set(self, sizec, greyscale, version, tmpdir):
         self.create_image(sizec=sizec)
-        rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
+        rd = self.get_render_def(sizec=sizec, greyscale=greyscale,
+                                 version=version)
         rdfile = tmpdir.join('render-test.json')
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
@@ -238,8 +239,13 @@ class TestRender(CLITest):
         for c in xrange(len(channels)):
             self.assert_channel_rdef(channels[c], rd['channels'][c + 1],
                                      version)
-        expected_greyscale = ((greyscale is None) or greyscale)
-        self.assert_image_rmodel(img, expected_greyscale)
+        if greyscale is None:
+            if sizec == 1:
+                self.assert_image_rmodel(img, True)
+            else:
+                self.assert_image_rmodel(img, False)
+        else:
+            self.assert_image_rmodel(img, greyscale)
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     @pytest.mark.parametrize('sizec', [1, 2])
