@@ -158,7 +158,7 @@ class TestRender(CLITest):
             d['greyscale'] = greyscale
         return d
 
-    def assert_channel_rdef(self, channel, rdef, version):
+    def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
         start = rdef['start'] if version > 1 else rdef['min']
@@ -212,52 +212,41 @@ class TestRender(CLITest):
         self.args += ["copy", self.source, target]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
-    @pytest.mark.broken(
-        reason=('https://trello.com/c/lyyGuRow/'
-                '657-incorrect-logical-channels-in-clitest-importplates'))
-    @pytest.mark.xfail(
-        reason=('https://trello.com/c/lyyGuRow/'
-                '657-incorrect-logical-channels-in-clitest-importplates'))
-    def test_set(self, target_name, tmpdir):
-        sizec = 4
-        greyscale = None
-        # 4 channels so should default to colour model
-        expected_greyscale = False
-        self.create_image(sizec=sizec, target_name=target_name)
-        rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
-        rdfile = tmpdir.join('render-test-edit.json')
-        # Should work with json and yaml, but yaml is an optional dependency
-        rdfile.write(json.dumps(rd))
-        target = getattr(self, target_name)
-        self.args += ["set", target, str(rdfile)]
-        self.cli.invoke(self.args, strict=True)
-
-        iids = self.get_target_imageids(target)
-        gw = BlitzGateway(client_obj=self.client)
-        for iid in iids:
-            # Get the updated object
-            img = gw.getObject('Image', iid)
-            channels = img.getChannels()
-            assert len(channels) == sizec
-            for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
-            self.assert_image_rmodel(img, expected_greyscale)
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testSet")
-
     # Once testSet is no longer broken testSetSingleC could be merged into
     # it with sizec and greyscale parameters
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    @pytest.mark.parametrize('sizec', [1, 2, 3, 4])
     @pytest.mark.parametrize('greyscale', [None, True, False])
     @pytest.mark.parametrize('version', [1, 2])
-    def test_set_single_channel(self, target_name, greyscale, tmpdir, version):
-        sizec = 1
-        # 1 channel so should default to greyscale model
+    def test_set(self, sizec, greyscale, version, tmpdir):
+        self.create_image(sizec=sizec)
+        rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
+        rdfile = tmpdir.join('render-test.json')
+        # Should work with json and yaml, but yaml is an optional dependency
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+
+        gw = BlitzGateway(client_obj=self.client)
+        # Get the updated object
+        img = gw.getObject('Image', self.idonly)
+        # Note: calling _prepareRE below does NOT suffice!
+        img._prepareRenderingEngine()  # Call *before* getChannels
+        # Passing noRE to getChannels below also prevents leaking
+        # the RenderingEngine but then Nones are returned later.
+        channels = img.getChannels()
+        assert len(channels) == sizec
+        for c in xrange(len(channels)):
+            self.assert_channel_rdef(channels[c], rd['channels'][c + 1],
+                                     version)
         expected_greyscale = ((greyscale is None) or greyscale)
+        self.assert_image_rmodel(img, expected_greyscale)
+
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    @pytest.mark.parametrize('sizec', [1, 2])
+    def test_set_target(self, target_name, sizec, tmpdir):
+        # 1 channel so should default to greyscale model
         self.create_image(sizec=sizec, target_name=target_name)
-        rd = self.get_render_def(sizec=sizec, greyscale=greyscale,
-                                 version=version)
+        rd = self.get_render_def(sizec=sizec)
         rdfile = tmpdir.join('render-test-editsinglec.json')
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
@@ -277,8 +266,6 @@ class TestRender(CLITest):
             channels = img.getChannels()
             assert len(channels) == sizec
             for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rd['channels'][c + 1],
-                                         version)
-            self.assert_image_rmodel(img, expected_greyscale)
+                self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
             # img._closeRE()
         # assert not gw._assert_unregistered("testEditSingleC")
