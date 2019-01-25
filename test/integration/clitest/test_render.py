@@ -91,7 +91,8 @@ class TestRender(CLITest):
             self.projectid = "Project:%s" % self.project.id
             self.datasetid = "Dataset:%s" % self.dataset.id
             self.link(obj1=project, obj2=dataset)
-            self.link(obj1=dataset, obj2=images)
+            for i in images:
+                self.link(obj1=dataset, obj2=i)
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
