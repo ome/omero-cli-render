@@ -173,7 +173,9 @@ class TestRender(CLITest):
             channels = img.getChannels()
             assert len(channels) == len(rdef['channels'])
             for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rdef['channels'][c + 1])
+                self.assert_channel_rdef(
+                    channels[c], rdef['channels'][c + 1],
+                    version=rdef['version'])
 
             if rdef.get('greyscale', None) is None:
                 if len(channels) == 1:
@@ -183,11 +185,11 @@ class TestRender(CLITest):
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
 
-    def assert_channel_rdef(self, channel, rdef):
+    def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
-        start = rdef['start'] if rdef['version'] > 1 else rdef['min']
-        end = rdef['end'] if rdef['version'] > 1 else rdef['max']
+        start = rdef['start'] if version > 1 else rdef['min']
+        end = rdef['end'] if version > 1 else rdef['max']
         assert channel.getWindowStart() == start
         assert channel.getWindowEnd() == end
 
