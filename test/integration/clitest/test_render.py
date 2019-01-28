@@ -156,6 +156,7 @@ class TestRender(CLITest):
 
         if greyscale is not None:
             d['greyscale'] = greyscale
+        d['version'] = version
         return d
 
     def assert_target_rdef(self, target, rdef):
@@ -182,11 +183,11 @@ class TestRender(CLITest):
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
 
-    def assert_channel_rdef(self, channel, rdef, version=2):
+    def assert_channel_rdef(self, channel, rdef):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
-        start = rdef['start'] if version > 1 else rdef['min']
-        end = rdef['end'] if version > 1 else rdef['max']
+        start = rdef['start'] if rdef['version'] > 1 else rdef['min']
+        end = rdef['end'] if rdef['version'] > 1 else rdef['max']
         assert channel.getWindowStart() == start
         assert channel.getWindowEnd() == end
 
