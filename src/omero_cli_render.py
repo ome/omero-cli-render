@@ -523,7 +523,7 @@ class RenderControl(BaseControl):
         version = _getversion(data)
         if version == 0:
             self.ctx.die(124, "ERROR: Cannot determine version. Specify"
-                              "version or use either start/end or min/max"
+                              " version or use either start/end or min/max"
                               " (not both).")
 
         for chindex, chdict in data['channels'].iteritems():
