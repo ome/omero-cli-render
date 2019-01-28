@@ -158,6 +158,30 @@ class TestRender(CLITest):
             d['greyscale'] = greyscale
         return d
 
+    def assert_target_rdef(self, target, rdef):
+        """Check the rendering setting of all images containing in a target"""
+        iids = self.get_target_imageids(target)
+        gw = BlitzGateway(client_obj=self.client)
+        for iid in iids:
+            # Get the updated object
+            img = gw.getObject('Image', iid)
+            # Note: calling _prepareRE below does NOT suffice!
+            img._prepareRenderingEngine()  # Call *before* getChannels
+            # Passing noRE to getChannels below also prevents leaking
+            # the RenderingEngine but then Nones are returned later.
+            channels = img.getChannels()
+            assert len(channels) == len(rdef['channels'])
+            for c in xrange(len(channels)):
+                self.assert_channel_rdef(channels[c], rdef['channels'][c + 1])
+
+            if rdef.get('greyscale', None) is None:
+                if len(channels) == 1:
+                    self.assert_image_rmodel(img, True)
+                else:
+                    self.assert_image_rmodel(img, False)
+            else:
+                self.assert_image_rmodel(img, rdef.get('greyscale'))
+
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
@@ -212,8 +236,6 @@ class TestRender(CLITest):
         self.args += ["copy", self.source, target]
         self.cli.invoke(self.args, strict=True)
 
-    # Once testSet is no longer broken testSetSingleC could be merged into
-    # it with sizec and greyscale parameters
     @pytest.mark.parametrize('sizec', [1, 2, 4])
     @pytest.mark.parametrize('greyscale', [None, True, False])
     @pytest.mark.parametrize('version', [1, 2])
@@ -226,31 +248,11 @@ class TestRender(CLITest):
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
-
-        gw = BlitzGateway(client_obj=self.client)
-        # Get the updated object
-        img = gw.getObject('Image', self.idonly)
-        # Note: calling _prepareRE below does NOT suffice!
-        img._prepareRenderingEngine()  # Call *before* getChannels
-        # Passing noRE to getChannels below also prevents leaking
-        # the RenderingEngine but then Nones are returned later.
-        channels = img.getChannels()
-        assert len(channels) == sizec
-        for c in xrange(len(channels)):
-            self.assert_channel_rdef(channels[c], rd['channels'][c + 1],
-                                     version)
-        if greyscale is None:
-            if sizec == 1:
-                self.assert_image_rmodel(img, True)
-            else:
-                self.assert_image_rmodel(img, False)
-        else:
-            self.assert_image_rmodel(img, greyscale)
+        self.assert_target_rdef(self.idonly, rd)
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     @pytest.mark.parametrize('sizec', [1, 2])
     def test_set_target(self, target_name, sizec, tmpdir):
-        # 1 channel so should default to greyscale model
         self.create_image(sizec=sizec, target_name=target_name)
         rd = self.get_render_def(sizec=sizec)
         rdfile = tmpdir.join('render-test-editsinglec.json')
@@ -259,19 +261,4 @@ class TestRender(CLITest):
         target = getattr(self, target_name)
         self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
-
-        iids = self.get_target_imageids(target)
-        gw = BlitzGateway(client_obj=self.client)
-        for iid in iids:
-            # Get the updated object
-            img = gw.getObject('Image', iid)
-            # Note: calling _prepareRE below does NOT suffice!
-            img._prepareRenderingEngine()  # Call *before* getChannels
-            # Passing noRE to getChannels below also prevents leaking
-            # the RenderingEngine but then Nones are returned later.
-            channels = img.getChannels()
-            assert len(channels) == sizec
-            for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testEditSingleC")
+        self.assert_target_rdef(target, rd)
