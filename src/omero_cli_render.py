@@ -127,7 +127,8 @@ TEST_HELP = """Test that underlying pixel data is available
 """
 
 # Current version for specifying rendering settings
-currentSpecVersion = 2
+# in the yaml / json files
+SPEC_VERSION = 2
 
 
 def _set_if_not_none(dictionary, k, v):
@@ -135,9 +136,42 @@ def _set_if_not_none(dictionary, k, v):
         dictionary[k] = v
 
 
-class ChannelObject(object):
+def _getversion(dictionary):
+    """ Returns the version of the rendering settings format
+    or 0 if it cannot be determined.
 
-    def __init__(self, channel):
+    Arguments:
+    dictionary -- The rendering settings as dictionary
+
+    Note: Previously min/max was used to set the channel window start/end
+    From version 2 on start/end will be used.
+    """
+
+    if 'version' not in dictionary:
+        for chindex, chdict in dictionary['channels'].iteritems():
+            if ('start' in chdict or 'end' in chdict) and\
+               ('min' in chdict or 'max' in chdict):
+                return 0
+            if 'start' in chdict or 'end' in chdict:
+                return 2
+            if 'min' in chdict or 'max' in chdict:
+                return 1
+    else:
+        return dictionary['version']
+    return 0
+
+
+class ChannelObject(object):
+    """ Represents the rendering settings of a channel
+
+        Arguments:
+        channel -- The rendering settings as dictionary
+        version -- The version of the renderings settings format
+                   (optional; default: latest)
+    """
+
+    def __init__(self, channel, version=SPEC_VERSION):
+        self.version = version
         try:
             self.init_from_channel(channel)
         except AttributeError:
@@ -160,15 +194,13 @@ class ChannelObject(object):
         self.active = channel.isActive()
 
     def init_from_dict(self, d):
-        if not d:
-            d = {}
         self.emWave = None
         self.label = d.get('label', None)
         self.color = d.get('color', None)
         self.min = float(d['min']) if 'min' in d else None
         self.max = float(d['max']) if 'max' in d else None
-        self.start = float(d['start']) if 'start' in d else None
-        self.end = float(d['end']) if 'end' in d else None
+        self.start = float(d['start']) if self.version > 1 else self.min
+        self.end = float(d['end']) if self.version > 1 else self.max
         self.active = bool(d.get('active', True))
 
     def __str__(self):
@@ -265,7 +297,7 @@ class RenderObject(object):
         chs = {}
         for idx, ch in enumerate(self.channels, 1):
             chs[idx] = ch.to_dict()
-        d['version'] = currentSpecVersion
+        d['version'] = SPEC_VERSION
         d['channels'] = chs
         d['greyscale'] = True if self.model == 'greyscale' else False
         return d
@@ -488,22 +520,11 @@ class RenderControl(BaseControl):
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % args.channels)
 
-        # Previously min/max was used to set the channel window start/end
-        # From version 2 on start/end will be used.
-        if 'version' not in data:
-            for chindex, chdict in data['channels'].iteritems():
-                if ('start' in chdict or 'end' in chdict) and\
-                        ('min' in chdict or 'max' in chdict):
-                    self.ctx.die(124, "ERROR: start/end and min/max specified,"
-                                      " cannot determine version.")
-                if 'start' in chdict or 'end' in chdict:
-                    version = 2
-                    break
-                if 'min' in chdict or 'max' in chdict:
-                    version = 1
-                    break
-        else:
-            version = data['version']
+        version = _getversion(data)
+        if version == 0:
+            self.ctx.die(124, "ERROR: Cannot determine version. Specify"
+                              " version or use either start/end or min/max"
+                              " (not both).")
 
         for chindex, chdict in data['channels'].iteritems():
             try:
@@ -514,12 +535,7 @@ class RenderControl(BaseControl):
                     105, "Invalid channel index: %s" % chindex)
 
             try:
-                cobj = ChannelObject(chdict)
-                if (cobj.min is None) != (cobj.max is None):
-                    raise Exception('Both or neither of min and max required')
-                if (cobj.start is None) != (cobj.end is None):
-                    raise Exception('Both or neither of start and end '
-                                    'required')
+                cobj = ChannelObject(chdict, version)
                 newchannels[cindex] = cobj
                 print '%d:%s' % (cindex, cobj)
             except Exception as e:
@@ -544,9 +560,7 @@ class RenderControl(BaseControl):
                 cindices.append(-i)
             else:
                 cindices.append(i)
-            start = c.start if version > 1 else c.min
-            end = c.end if version > 1 else c.max
-            rangelist.append([start, end])
+            rangelist.append([c.start, c.end])
             colourlist.append(c.color)
 
         iids = []
