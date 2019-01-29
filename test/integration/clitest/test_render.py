@@ -29,14 +29,8 @@ from omero.gateway import BlitzGateway
 
 
 # TODO: rdefid, tbid
-SUPPORTED = {
-    "idonly": "-1",
-    "imageid": "Image:-1",
-    "plateid": "Plate:-1",
-    "screenid": "Screen:-1",
-    "datasetid": "Dataset:-1",
-    "projectid": "Project:-1"
-}
+SUPPORTED = [
+    "idonly", "imageid", "plateid", "screenid", "datasetid", "projectid"]
 
 
 class TestRender(CLITest):
@@ -45,43 +39,60 @@ class TestRender(CLITest):
         super(TestRender, self).setup_method(method)
         self.cli.register("render", RenderControl, "TEST")
         self.args += ["render"]
+        self.idonly = "-1"
+        self.imageid = "Image:-1"
+        self.plateid = "Plate:-1"
+        self.screenid = "Screen:-1"
+        self.datasetid = "Dataset:-1"
+        self.projectid = "Project:-1"
 
-    def create_image(self, sizec=4):
+    def create_image(self, sizec=4, target_name=None):
         self.gw = BlitzGateway(client_obj=self.client)
-        self.plates = []
-        for plate in self.import_plates(client=self.client, fields=2,
-                                        sizeC=sizec, screens=1):
-            self.plates.append(self.gw.getObject("Plate", plate.id.val))
-        # Now pick the first Image
-        self.imgobj = list(self.plates[0].listChildren())[0].getImage(index=0)
-        self.idonly = "%s" % self.imgobj.id
-        self.imageid = "Image:%s" % self.imgobj.id
-        self.plateid = "Plate:%s" % self.plates[0].id
-        self.screenid = "Screen:%s" % self.plates[0].getParent().id
-        # And another one as the source for copies
-        self.source = list(self.plates[0].listChildren())[0].getImage(index=1)
-        self.source = "Image:%s" % self.source.id
-        # And for all the images, pre-load a thumbnail
-        for p in self.plates:
-            for w in p.listChildren():
-                for i in range(w.countWellSample()):
-                    img = w.getImage(index=i)
-                    img.getThumbnail(
-                        size=(96,), direct=False)
+        if target_name == "plateid" or target_name == "screenid":
+            self.plates = []
+            for plate in self.import_plates(client=self.client, fields=2,
+                                            sizeC=sizec, screens=1):
+                self.plates.append(self.gw.getObject("Plate", plate.id.val))
+            # Now pick the first Image
+            self.imgobj = list(
+                self.plates[0].listChildren())[0].getImage(index=0)
+            self.idonly = "%s" % self.imgobj.id
+            self.imageid = "Image:%s" % self.imgobj.id
+            self.plateid = "Plate:%s" % self.plates[0].id
+            self.screenid = "Screen:%s" % self.plates[0].getParent().id
+            # And another one as the source for copies
+            self.source = list(
+                self.plates[0].listChildren())[0].getImage(index=1)
+            self.source = "Image:%s" % self.source.id
 
-        # Create Project/Dataset hierarchy
-        project = self.make_project(client=self.client)
-        self.project = self.gw.getObject("Project", project.id.val)
-        dataset = self.make_dataset(client=self.client)
-        self.dataset = self.gw.getObject("Dataset", dataset.id.val)
-        self.projectid = "Project:%s" % self.project.id
-        self.datasetid = "Dataset:%s" % self.dataset.id
-        self.link(obj1=project, obj2=dataset)
-        images = self.import_fake_file(images_count=1, sizeC=sizec,
-                                       client=self.client)
-        self.link(obj1=dataset, obj2=images[0])
-        img = self.gw.getObject("Image", images[0].id.val)
-        img.getThumbnail(size=(96,), direct=False)
+            # And for all the images, pre-load a thumbnail
+            for p in self.plates:
+                for w in p.listChildren():
+                    for i in range(w.countWellSample()):
+                        img = w.getImage(index=i)
+                        img.getThumbnail(
+                            size=(96,), direct=False)
+        else:
+            images = self.import_fake_file(images_count=2, sizeC=sizec,
+                                           client=self.client)
+            self.idonly = "%s" % images[0].id.val
+            self.imageid = "Image:%s" % images[0].id.val
+            self.source = "Image:%s" % images[1].id.val
+            for image in images:
+                img = self.gw.getObject("Image", image.id.val)
+                img.getThumbnail(size=(96,), direct=False)
+
+        if target_name == "datasetid" or target_name == "projectid":
+            # Create Project/Dataset hierarchy
+            project = self.make_project(client=self.client)
+            self.project = self.gw.getObject("Project", project.id.val)
+            dataset = self.make_dataset(client=self.client)
+            self.dataset = self.gw.getObject("Dataset", dataset.id.val)
+            self.projectid = "Project:%s" % self.project.id
+            self.datasetid = "Dataset:%s" % self.dataset.id
+            self.link(obj1=project, obj2=dataset)
+            for i in images:
+                self.link(obj1=dataset, obj2=i)
 
     def get_target_imageids(self, target):
         if target in (self.idonly, self.imageid):
@@ -145,9 +156,36 @@ class TestRender(CLITest):
 
         if greyscale is not None:
             d['greyscale'] = greyscale
+        d['version'] = version
         return d
 
-    def assert_channel_rdef(self, channel, rdef, version):
+    def assert_target_rdef(self, target, rdef):
+        """Check the rendering setting of all images containing in a target"""
+        iids = self.get_target_imageids(target)
+        gw = BlitzGateway(client_obj=self.client)
+        for iid in iids:
+            # Get the updated object
+            img = gw.getObject('Image', iid)
+            # Note: calling _prepareRE below does NOT suffice!
+            img._prepareRenderingEngine()  # Call *before* getChannels
+            # Passing noRE to getChannels below also prevents leaking
+            # the RenderingEngine but then Nones are returned later.
+            channels = img.getChannels()
+            assert len(channels) == len(rdef['channels'])
+            for c in xrange(len(channels)):
+                self.assert_channel_rdef(
+                    channels[c], rdef['channels'][c + 1],
+                    version=rdef['version'])
+
+            if rdef.get('greyscale', None) is None:
+                if len(channels) == 1:
+                    self.assert_image_rmodel(img, True)
+                else:
+                    self.assert_image_rmodel(img, False)
+            else:
+                self.assert_image_rmodel(img, rdef.get('greyscale'))
+
+    def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
         start = rdef['start'] if version > 1 else rdef['min']
@@ -173,16 +211,15 @@ class TestRender(CLITest):
         assert "ok" in lines[0]
         assert "ok" in lines[1]
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_non_existing_image(self, target_name, tmpdir):
-        target = SUPPORTED[target_name]
-        self.args += ["info", target]
+        self.args += ["info", getattr(self, target_name)]
         with pytest.raises(NonZeroReturnCode):
             self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_info(self, target_name, tmpdir):
-        self.create_image()
+        self.create_image(target_name=target_name)
         target = getattr(self, target_name)
         self.args += ["info", target]
         self.cli.invoke(self.args, strict=True)
@@ -195,80 +232,36 @@ class TestRender(CLITest):
         self.args += ['--style', style]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_copy(self, target_name, tmpdir):
-        self.create_image()
+        self.create_image(target_name=target_name)
         target = getattr(self, target_name)
         self.args += ["copy", self.source, target]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
-    @pytest.mark.broken(
-        reason=('https://trello.com/c/lyyGuRow/'
-                '657-incorrect-logical-channels-in-clitest-importplates'))
-    @pytest.mark.xfail(
-        reason=('https://trello.com/c/lyyGuRow/'
-                '657-incorrect-logical-channels-in-clitest-importplates'))
-    def test_set(self, target_name, tmpdir):
-        sizec = 4
-        greyscale = None
-        # 4 channels so should default to colour model
-        expected_greyscale = False
-        self.create_image(sizec=sizec)
-        rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
-        rdfile = tmpdir.join('render-test-edit.json')
-        # Should work with json and yaml, but yaml is an optional dependency
-        rdfile.write(json.dumps(rd))
-        target = getattr(self, target_name)
-        self.args += ["set", target, str(rdfile)]
-        self.cli.invoke(self.args, strict=True)
-
-        iids = self.get_target_imageids(target)
-        gw = BlitzGateway(client_obj=self.client)
-        for iid in iids:
-            # Get the updated object
-            img = gw.getObject('Image', iid)
-            channels = img.getChannels()
-            assert len(channels) == sizec
-            for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rd['channels'][c + 1])
-            self.assert_image_rmodel(img, expected_greyscale)
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testSet")
-
-    # Once testSet is no longer broken testSetSingleC could be merged into
-    # it with sizec and greyscale parameters
-    @pytest.mark.parametrize('target_name', sorted(SUPPORTED.keys()))
+    @pytest.mark.parametrize('sizec', [1, 2, 4])
     @pytest.mark.parametrize('greyscale', [None, True, False])
     @pytest.mark.parametrize('version', [1, 2])
-    def test_set_single_channel(self, target_name, greyscale, tmpdir, version):
-        sizec = 1
-        # 1 channel so should default to greyscale model
-        expected_greyscale = ((greyscale is None) or greyscale)
+    def test_set(self, sizec, greyscale, version, tmpdir):
         self.create_image(sizec=sizec)
         rd = self.get_render_def(sizec=sizec, greyscale=greyscale,
                                  version=version)
+        rdfile = tmpdir.join('render-test.json')
+        # Should work with json and yaml, but yaml is an optional dependency
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
+
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    @pytest.mark.parametrize('sizec', [1, 2])
+    def test_set_target(self, target_name, sizec, tmpdir):
+        self.create_image(sizec=sizec, target_name=target_name)
+        rd = self.get_render_def(sizec=sizec)
         rdfile = tmpdir.join('render-test-editsinglec.json')
         # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
         target = getattr(self, target_name)
         self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
-
-        iids = self.get_target_imageids(target)
-        gw = BlitzGateway(client_obj=self.client)
-        for iid in iids:
-            # Get the updated object
-            img = gw.getObject('Image', iid)
-            # Note: calling _prepareRE below does NOT suffice!
-            img._prepareRenderingEngine()  # Call *before* getChannels
-            # Passing noRE to getChannels below also prevents leaking
-            # the RenderingEngine but then Nones are returned later.
-            channels = img.getChannels()
-            assert len(channels) == sizec
-            for c in xrange(len(channels)):
-                self.assert_channel_rdef(channels[c], rd['channels'][c + 1],
-                                         version)
-            self.assert_image_rmodel(img, expected_greyscale)
-            # img._closeRE()
-        # assert not gw._assert_unregistered("testEditSingleC")
+        self.assert_target_rdef(target, rd)
