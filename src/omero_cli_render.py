@@ -199,8 +199,12 @@ class ChannelObject(object):
         self.color = d.get('color', None)
         self.min = float(d['min']) if 'min' in d else None
         self.max = float(d['max']) if 'max' in d else None
-        self.start = float(d['start']) if self.version > 1 else self.min
-        self.end = float(d['end']) if self.version > 1 else self.max
+        if self.version > 1:
+            self.start = float(d['start']) if 'start' in d else None
+            self.end = float(d['end']) if 'end' in d else None
+        else:
+            self.start = self.min
+            self.end = self.max
         self.active = bool(d.get('active', True))
 
     def __str__(self):
