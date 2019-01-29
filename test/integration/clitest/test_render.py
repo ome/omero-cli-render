@@ -121,34 +121,33 @@ class TestRender(CLITest):
             return imgs
         raise Exception('Unknown target: %s' % target)
 
-    def get_render_def(self, sizec=4, greyscale=None, version=2):
+    def get_render_def(self, sizec=4, greyscale=None, version=2, windows=True):
+        # Define channels with labels and colors
         channels = {}
-        start = 'start' if version > 1 else 'min'
-        end = 'end' if version > 1 else 'max'
         channels[1] = {
             'label': self.uuid(),
             'color': '123456',
-            start: 11,
-            end: 22,
         }
         channels[2] = {
             'label': self.uuid(),
             'color': '789ABC',
-            start: 33,
-            end: 44,
         }
         channels[3] = {
             'label': self.uuid(),
             'color': 'DEF012',
-            start: 55,
-            end: 66,
         }
         channels[4] = {
             'label': self.uuid(),
             'color': '345678',
-            start: 77,
-            end: 88,
         }
+
+        if windows:
+            # Define rendering windows
+            start = 'start' if version > 1 else 'min'
+            end = 'end' if version > 1 else 'max'
+            for i in range(sizec):
+                channels[i + 1].update(
+                    {start: (i + i) * 11, end: (i + i) * 22})
 
         for k in xrange(sizec, 4):
             del channels[k + 1]
@@ -241,13 +240,21 @@ class TestRender(CLITest):
 
     @pytest.mark.parametrize('sizec', [1, 2, 4])
     @pytest.mark.parametrize('greyscale', [None, True, False])
-    @pytest.mark.parametrize('version', [1, 2])
-    def test_set(self, sizec, greyscale, version, tmpdir):
+    def test_set_greyscale(self, sizec, greyscale, tmpdir):
         self.create_image(sizec=sizec)
-        rd = self.get_render_def(sizec=sizec, greyscale=greyscale,
-                                 version=version)
+        rd = self.get_render_def(sizec=sizec, greyscale=greyscale)
         rdfile = tmpdir.join('render-test.json')
-        # Should work with json and yaml, but yaml is an optional dependency
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
+
+    @pytest.mark.parametrize('version', [1, 2])
+    @pytest.mark.parametrize('windows', [True, False])
+    def test_set_windows(self, version, windows, tmpdir):
+        self.create_image()
+        rd = self.get_render_def(version=version, windows=windows)
+        rdfile = tmpdir.join('render-test.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
