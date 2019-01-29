@@ -187,10 +187,10 @@ class TestRender(CLITest):
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
         assert channel.getColor().getHtml() == rdef['color']
-        start = rdef['start'] if version > 1 else rdef['min']
-        end = rdef['end'] if version > 1 else rdef['max']
-        assert channel.getWindowStart() == start
-        assert channel.getWindowEnd() == end
+        start = 'start' if version > 1 else 'min'
+        end = 'end' if version > 1 else 'max'
+        assert channel.getWindowStart() == rdef.get(start, 0)
+        assert channel.getWindowEnd() == rdef.get(end, 255)
 
     def assert_image_rmodel(self, img, greyscale):
         assert img.isGreyscaleRenderingModel() == greyscale
