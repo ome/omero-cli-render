@@ -302,6 +302,8 @@ class RenderObject(object):
         for idx, ch in enumerate(self.channels, 1):
             chs[idx] = ch.to_dict()
         d['version'] = SPEC_VERSION
+        d['z'] = int(self.defaultZ+1)
+        d['t'] = int(self.defaultT+1)
         d['channels'] = chs
         d['greyscale'] = True if self.model == 'greyscale' else False
         return d
@@ -530,6 +532,9 @@ class RenderControl(BaseControl):
                               " version or use either start/end or min/max"
                               " (not both).")
 
+        defZ = data['z'] if 'z' in data else None
+        defT = data['t'] if 't' in data else None
+
         for chindex, chdict in data['channels'].iteritems():
             try:
                 cindex = int(chindex)
@@ -592,6 +597,11 @@ class RenderControl(BaseControl):
 
             if len(reactivatechannels) > 0:
                 img.set_active_channels(reactivatechannels)
+
+            if defZ:
+                img.setDefaultZ(defZ-1)
+            if defT:
+                img.setDefaultT(defT-1)
 
             img.saveDefaults()
             self.ctx.dbg(
