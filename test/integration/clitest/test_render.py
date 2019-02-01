@@ -46,12 +46,13 @@ class TestRender(CLITest):
         self.datasetid = "Dataset:-1"
         self.projectid = "Project:-1"
 
-    def create_image(self, sizec=4, target_name=None):
+    def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None):
         self.gw = BlitzGateway(client_obj=self.client)
         if target_name == "plateid" or target_name == "screenid":
             self.plates = []
-            for plate in self.import_plates(client=self.client, fields=2,
-                                            sizeC=sizec, screens=1):
+            for plate in self.import_plates(
+                    client=self.client, fields=2, sizeZ=sizez, sizeT=sizet,
+                    sizeC=sizec, screens=1):
                 self.plates.append(self.gw.getObject("Plate", plate.id.val))
             # Now pick the first Image
             self.imgobj = list(
@@ -73,8 +74,9 @@ class TestRender(CLITest):
                         img.getThumbnail(
                             size=(96,), direct=False)
         else:
-            images = self.import_fake_file(images_count=2, sizeC=sizec,
-                                           client=self.client)
+            images = self.import_fake_file(
+                images_count=2, sizeZ=sizez, sizeT=sizet, sizeC=sizec,
+                client=self.client)
             self.idonly = "%s" % images[0].id.val
             self.imageid = "Image:%s" % images[0].id.val
             self.source = "Image:%s" % images[1].id.val
@@ -121,7 +123,8 @@ class TestRender(CLITest):
             return imgs
         raise Exception('Unknown target: %s' % target)
 
-    def get_render_def(self, sizec=4, greyscale=None, version=2, windows=True):
+    def get_render_def(self, sizec=4, greyscale=None, version=2, windows=True,
+                       z=None, t=None):
         # Define channels with labels and colors
         channels = {}
         channels[1] = {
@@ -149,12 +152,16 @@ class TestRender(CLITest):
                 channels[i + 1].update(
                     {start: (i + i) * 11, end: (i + i) * 22})
 
-        for k in xrange(sizec, 4):
-            del channels[k + 1]
         d = {'channels': channels}
 
         if greyscale is not None:
             d['greyscale'] = greyscale
+        if t:
+            d['t'] = t
+        if z:
+            d['z'] = z
+        for k in xrange(sizec, 4):
+            del channels[k + 1]
         d['version'] = version
         return d
 
@@ -183,6 +190,17 @@ class TestRender(CLITest):
                     self.assert_image_rmodel(img, False)
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
+
+            if 't' in rdef:
+                assert img.getDefaultT() == rdef.get('t') - 1
+            else:
+                # If not set, default T plane is the first one
+                assert img.getDefaultT() == 0
+            if 'z' in rdef:
+                assert img.getDefaultZ() == rdef.get('z') - 1
+            else:
+                # If not set, default Z plane is the middle one
+                assert img.getDefaultZ() == (int)(img.getSizeZ() / 2)
 
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
@@ -266,9 +284,19 @@ class TestRender(CLITest):
         self.create_image(sizec=sizec, target_name=target_name)
         rd = self.get_render_def(sizec=sizec)
         rdfile = tmpdir.join('render-test-editsinglec.json')
-        # Should work with json and yaml, but yaml is an optional dependency
         rdfile.write(json.dumps(rd))
         target = getattr(self, target_name)
         self.args += ["set", target, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(target, rd)
+
+    @pytest.mark.parametrize('z', [None, 2, 5])
+    @pytest.mark.parametrize('t', [None, 1, 12])
+    def test_set_defaults(self, z, t, tmpdir):
+        self.create_image(sizez=10, sizet=15)
+        rd = self.get_render_def(z=z, t=t)
+        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
