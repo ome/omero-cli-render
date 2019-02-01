@@ -2,13 +2,20 @@ CHANGES
 =======
 
 
-0.4.0a2
+0.4.0a4
 -------
 
-* Drop Python 2.6 support [#17](https://github.com/ome/omero-cli-render/pull/17)
-* CLI render version 2: use start/end for setting channel rendering window instead of min/max [#15](https://github.com/ome/omero-cli-render/pull/15) [#22](https://github.com/ome/omero-cli-render/pull/22)
-* Add logic for render version detection logic [#20](https://github.com/ome/omero-cli-render/pull/20)
-* Review integration tests [#21](https://github.com/ome/omero-cli-render/pull/21)
+*   Drop Python 2.6 support
+    [#17](https://github.com/ome/omero-cli-render/pull/17)
+*   CLI render version 2: use start/end for setting channel rendering window
+    instead of min/max [#15](https://github.com/ome/omero-cli-render/pull/15)
+    [#22](https://github.com/ome/omero-cli-render/pull/22)
+*   CLI render version 2: add support for settings default z/t planes
+    [#23](https://github.com/ome/omero-cli-render/pull/23)
+*   Add logic for render version detection logic
+    [#20](https://github.com/ome/omero-cli-render/pull/20)
+*   Review integration tests
+    [#21](https://github.com/ome/omero-cli-render/pull/21)
 
 
 0.3.1
