@@ -156,10 +156,10 @@ class TestRender(CLITest):
 
         if greyscale is not None:
             d['greyscale'] = greyscale
-        if defaultt:
-            d['t'] = defaultt
-        if defaultz:
-            d['z'] = defaultz
+        if t:
+            d['t'] = t
+        if z:
+            d['z'] = z
         for k in xrange(sizec, 4):
             del channels[k + 1]
         d['version'] = version
@@ -191,8 +191,14 @@ class TestRender(CLITest):
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
 
-            assert img.getDefaultT() == rdef.get('t', (int) img.getSizeT() / 2)
-            assert img.getDefaultZ() == rdef.get('z', (int) img.getSizeZ() / 2)
+            if 't' in rdef:
+                assert img.getDefaultT() == rdef.get('t') - 1
+            else:
+                assert img.getDefaultT() == (int)(img.getSizeT() / 2)
+            if 'z' in rdef:
+                assert img.getDefaultZ() == rdef.get('z') - 1
+            else:
+                assert img.getDefaultT() == (int)(img.getSizeZ() / 2)
 
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
@@ -283,7 +289,7 @@ class TestRender(CLITest):
         self.assert_target_rdef(target, rd)
 
     @pytest.mark.parametrize('z', [None, 2, 5])
-    @pytest.mark.parametrize('t', [None, 0, 12])
+    @pytest.mark.parametrize('t', [None, 1, 12])
     def test_set_defaults(self, z, t, tmpdir):
         self.create_image(sizez=10, sizet=15)
         rd = self.get_render_def(z=z, t=t)
