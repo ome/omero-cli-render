@@ -194,11 +194,13 @@ class TestRender(CLITest):
             if 't' in rdef:
                 assert img.getDefaultT() == rdef.get('t') - 1
             else:
-                assert img.getDefaultT() == (int)(img.getSizeT() / 2)
+                # If not set, default T plane is the first one
+                assert img.getDefaultT() == 0
             if 'z' in rdef:
                 assert img.getDefaultZ() == rdef.get('z') - 1
             else:
-                assert img.getDefaultT() == (int)(img.getSizeZ() / 2)
+                # If not set, default Z plane is the middle one
+                assert img.getDefaultZ() == (int)(img.getSizeZ() / 2)
 
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
