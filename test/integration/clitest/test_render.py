@@ -124,7 +124,7 @@ class TestRender(CLITest):
         raise Exception('Unknown target: %s' % target)
 
     def get_render_def(self, sizec=4, greyscale=None, version=2, windows=True,
-                       defaultz=None, defaultt=None):
+                       z=None, t=None):
         # Define channels with labels and colors
         channels = {}
         channels[1] = {
@@ -159,7 +159,7 @@ class TestRender(CLITest):
         if defaultt:
             d['t'] = defaultt
         if defaultz:
-            d['Z'] = defaultz
+            d['z'] = defaultz
         for k in xrange(sizec, 4):
             del channels[k + 1]
         d['version'] = version
@@ -191,10 +191,8 @@ class TestRender(CLITest):
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
 
-            if 't' in rdef:
-                assert img.getDefaultT() == rdef.get('t')
-            if 'z' in rdef:
-                assert img.getDefaultZ() == rdef.get('z')
+            assert img.getDefaultT() == rdef.get('t', (int) img.getSizeT() / 2)
+            assert img.getDefaultZ() == rdef.get('z', (int) img.getSizeZ() / 2)
 
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
@@ -284,10 +282,11 @@ class TestRender(CLITest):
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(target, rd)
 
-    @pytest.mark.parametrize('defaultz', [0, 2, 9])
-    def test_set_defaultz(self, defaultz, tmpdir):
-        self.create_image(sizez=10)
-        rd = self.get_render_def(defaultz=defaultz)
+    @pytest.mark.parametrize('z', [None, 2, 5])
+    @pytest.mark.parametrize('t', [None, 0, 12])
+    def test_set_defaults(self, z, t, tmpdir):
+        self.create_image(sizez=10, sizet=15)
+        rd = self.get_render_def(z=z, t=t)
         rdfile = tmpdir.join('render-test-setdefaultz.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
