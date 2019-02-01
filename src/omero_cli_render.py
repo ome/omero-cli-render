@@ -532,8 +532,8 @@ class RenderControl(BaseControl):
                               " version or use either start/end or min/max"
                               " (not both).")
 
-        defZ = data['z'] if 'z' in data else None
-        defT = data['t'] if 't' in data else None
+        def_z = data['z'] if 'z' in data else None
+        def_t = data['t'] if 't' in data else None
 
         for chindex, chdict in data['channels'].iteritems():
             try:
@@ -598,10 +598,10 @@ class RenderControl(BaseControl):
             if len(reactivatechannels) > 0:
                 img.set_active_channels(reactivatechannels)
 
-            if defZ:
-                img.setDefaultZ(defZ-1)
-            if defT:
-                img.setDefaultT(defT-1)
+            if def_z:
+                img.setDefaultZ(def_z - 1)
+            if def_t:
+                img.setDefaultT(def_t - 1)
 
             img.saveDefaults()
             self.ctx.dbg(
