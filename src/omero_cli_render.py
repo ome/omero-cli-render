@@ -536,15 +536,13 @@ class RenderControl(BaseControl):
             self.ctx.die(
                 105, "Invalid default T plane: %s" % def_t)
 
-        # Validate plane index with image dimensions
+        # Validate default plane index against image dimensions
         if def_z and def_z > img.getSizeZ():
             msg = ("Inconsistent default Z plane. Expected to set %s but the"
                    " image dimension is %s" % (def_z, img.getSizeZ()))
             if not ignore_errors:
                 self.ctx.die(106, msg)
             else:
-                # Attempt to auto-correct the default T plane for single
-                # timepoint images
                 self.ctx.dbg(msg + ". Ignoring.")
                 def_z = None
         if def_t and def_t > img.getSizeT():
@@ -553,8 +551,6 @@ class RenderControl(BaseControl):
             if not ignore_errors:
                 self.ctx.die(106, msg)
             else:
-                # Attempt to auto-correct the default T plane for single
-                # timepoint images
                 self.ctx.dbg(msg + ". Ignoring.")
                 def_t = None
         return (def_z, def_t)
