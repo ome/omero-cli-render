@@ -156,9 +156,9 @@ class TestRender(CLITest):
 
         if greyscale is not None:
             d['greyscale'] = greyscale
-        if t:
+        if t is not None:
             d['t'] = t
-        if z:
+        if z is not None:
             d['z'] = z
         for k in xrange(sizec, 4):
             del channels[k + 1]
