@@ -541,7 +541,7 @@ class RenderControl(BaseControl):
             msg = ("Inconsistent default Z plane. Expected to set %s but the"
                    " image dimension is %s" % (def_z, img.getSizeZ()))
             if not ignore_errors:
-                self.ctx.die(msg)
+                self.ctx.die(106, msg)
             else:
                 # Attempt to auto-correct the default T plane for single
                 # timepoint images
@@ -551,7 +551,7 @@ class RenderControl(BaseControl):
             msg = ("Inconsistent default T plane. Expected to set %s but the"
                    " image dimension is %s" % (def_t, img.getSizeT()))
             if not ignore_errors:
-                self.ctx.die(107, msg)
+                self.ctx.die(106, msg)
             else:
                 # Attempt to auto-correct the default T plane for single
                 # timepoint images
