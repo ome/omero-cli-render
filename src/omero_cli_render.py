@@ -532,9 +532,17 @@ class RenderControl(BaseControl):
                               " version or use either start/end or min/max"
                               " (not both).")
 
+        # Read default planes from rendering dictionary
         def_z = data['z'] if 'z' in data else None
         def_t = data['t'] if 't' in data else None
+        if def_z < 0 of int(def_z) != def_z:
+            self.ctx.die(
+                105, "Invalid default Z plane: %s" % def_z)
+        if def_t < 0 of int(def_t) != def_t:
+            self.ctx.die(
+                105, "Invalid default T plane: %s" % def_t)
 
+        # Read channel setttings from rendering dictionary
         for chindex, chdict in data['channels'].iteritems():
             try:
                 cindex = int(chindex)

@@ -300,3 +300,20 @@ class TestRender(CLITest):
         self.args += ["set", self.idonly, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
+
+    @pytest.mark.parametrize('value', [0, 0.5])
+    def test_invalid_defaults(self, value, tmpdir):
+        self.create_image()
+        rd = self.get_render_def(z=value)
+        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(self.args, strict=True)
+
+        rd = self.get_render_def(t=value)
+        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(self.args, strict=True)
