@@ -521,13 +521,26 @@ class RenderControl(BaseControl):
             self.ctx.dbg("Image:%s got thumbnail in %2.2fs" % (
                 img.id, stop - start))
 
-    def validate_defaults(self, img, def_z, def_t, strict=True):
-        """Validates the rendering settings with the image"""
+    def _read_default_planes(self, img, data, ignore_errors=False):
+        """Read and validate the default planes"""
 
+        # Read values from dictionary
+        def_z = data['z'] if 'z' in data else None
+        def_t = data['t'] if 't' in data else None
+
+        # Minimal validation: default planes should be 1-indexed integers
+        if def_z and (def_z < 0 or int(def_z) != def_z):
+            self.ctx.die(
+                105, "Invalid default Z plane: %s" % def_z)
+        if def_t and (def_t < 0 or int(def_t) != def_t):
+            self.ctx.die(
+                105, "Invalid default T plane: %s" % def_t)
+
+        # Validate plane index with image dimensions
         if def_z and def_z > img.getSizeZ():
             msg = ("Inconsistent default Z plane. Expected to set %s but the"
                    " image dimension is %s" % (def_z, img.getSizeZ()))
-            if strict:
+            if not ignore_errors:
                 self.ctx.die(msg)
             else:
                 # Attempt to auto-correct the default T plane for single
@@ -537,7 +550,7 @@ class RenderControl(BaseControl):
         if def_t and def_t > img.getSizeT():
             msg = ("Inconsistent default T plane. Expected to set %s but the"
                    " image dimension is %s" % (def_t, img.getSizeT()))
-            if strict:
+            if not ignore_errors:
                 self.ctx.die(107, msg)
             else:
                 # Attempt to auto-correct the default T plane for single
@@ -559,16 +572,6 @@ class RenderControl(BaseControl):
             self.ctx.die(124, "ERROR: Cannot determine version. Specify"
                               " version or use either start/end or min/max"
                               " (not both).")
-
-        # Read default planes from rendering dictionary
-        def_z = data['z'] if 'z' in data else None
-        def_t = data['t'] if 't' in data else None
-        if def_z and (def_z < 0 or int(def_z) != def_z):
-            self.ctx.die(
-                105, "Invalid default Z plane: %s" % def_z)
-        if def_t and (def_t < 0 or int(def_t) != def_t):
-            self.ctx.die(
-                105, "Invalid default T plane: %s" % def_t)
 
         # Read channel setttings from rendering dictionary
         for chindex, chdict in data['channels'].iteritems():
@@ -612,8 +615,8 @@ class RenderControl(BaseControl):
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
 
-            (def_z, def_t) = self.validate_defaults(
-                img, def_z, def_t, strict=args.ignore_errors)
+            (def_z, def_t) = self._read_default_planes(
+                img, data, ignore_errors=args.ignore_errors)
 
             reactivatechannels = []
             if not args.disable:
