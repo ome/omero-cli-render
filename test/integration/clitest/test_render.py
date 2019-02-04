@@ -191,12 +191,12 @@ class TestRender(CLITest):
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
 
-            if 't' in rdef:
+            if 't' in rdef and rdef['t'] <= img.getSizeT():
                 assert img.getDefaultT() == rdef.get('t') - 1
             else:
                 # If not set, default T plane is the first one
                 assert img.getDefaultT() == 0
-            if 'z' in rdef:
+            if 'z' in rdef and rdef['z'] <= img.getSizeZ():
                 assert img.getDefaultZ() == rdef.get('z') - 1
             else:
                 # If not set, default Z plane is the middle one
