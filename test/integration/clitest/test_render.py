@@ -333,6 +333,6 @@ class TestRender(CLITest):
             self.cli.invoke(self.args, strict=True)
 
         # With ignore-errors, the default planes should be ignored
-        self.args += ["set", "--ignore-errors", self.idonly, str(rdfile)]
+        self.args += ["--ignore-errors"]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
