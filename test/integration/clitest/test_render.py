@@ -295,35 +295,35 @@ class TestRender(CLITest):
     def test_set_defaults(self, z, t, tmpdir):
         self.create_image(sizez=10, sizet=15)
         rd = self.get_render_def(z=z, t=t)
-        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rdfile = tmpdir.join('render-test-setdefaults.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
 
-    @pytest.mark.parametrize('value', [0, 0.5])
-    def test_invalid_defaults(self, value, tmpdir):
+    @pytest.mark.parametrize('invalid_value', [0, 0.5])
+    def test_set_invalid_defaults(self, invalid_value, tmpdir):
         self.create_image()
-        rd = self.get_render_def(z=value)
-        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rd = self.get_render_def(z=invalid_value)
+        rdfile = tmpdir.join('render-test-setinvaliddefaults.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
         with pytest.raises(NonZeroReturnCode):
             self.cli.invoke(self.args, strict=True)
 
-        rd = self.get_render_def(t=value)
-        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rd = self.get_render_def(t=invalid_value)
+        rdfile = tmpdir.join('render-test-setinvaliddefaults.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
         with pytest.raises(NonZeroReturnCode):
             self.cli.invoke(self.args, strict=True)
 
     @pytest.mark.parametrize('z, t', [
-        (6, None), (6, 8), [None, 8)]])
-    def test_invalid_defaults2(self, z, t, tmpdir):
+        (6, None), (6, 8), (None, 8)])
+    def test_set_invalid_defaults2(self, z, t, tmpdir):
         self.create_image(sizez=5, sizet=6)
         rd = self.get_render_def(z=z, t=t)
-        rdfile = tmpdir.join('render-test-invaliddefaults2.json')
+        rdfile = tmpdir.join('render-test-setinvaliddefaults2.json')
         rdfile.write(json.dumps(rd))
 
         # Default behavior should be to error on mismatching
