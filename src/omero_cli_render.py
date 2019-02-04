@@ -529,10 +529,10 @@ class RenderControl(BaseControl):
         def_t = data['t'] if 't' in data else None
 
         # Minimal validation: default planes should be 1-indexed integers
-        if def_z and (def_z < 0 or int(def_z) != def_z):
+        if def_z and (def_z < 1 or int(def_z) != def_z):
             self.ctx.die(
                 105, "Invalid default Z plane: %s" % def_z)
-        if def_t and (def_t < 0 or int(def_t) != def_t):
+        if def_t and (def_t < 1 or int(def_t) != def_t):
             self.ctx.die(
                 105, "Invalid default T plane: %s" % def_t)
 
