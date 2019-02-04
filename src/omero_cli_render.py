@@ -374,6 +374,9 @@ class RenderControl(BaseControl):
                 "--disable", help="Disable non specified channels ",
                 action="store_true")
             x.add_argument(
+                "--ignore-errors", help="Do not error on mismatching"
+                " rendering settings", action="store_true")
+            x.add_argument(
                 "channels",
                 help="Local file or OriginalFile:ID which specifies the "
                      "rendering settings")
@@ -518,6 +521,31 @@ class RenderControl(BaseControl):
             self.ctx.dbg("Image:%s got thumbnail in %2.2fs" % (
                 img.id, stop - start))
 
+    def validate_defaults(self, img, def_z, def_t, strict=True):
+        """Validates the rendering settings with the image"""
+
+        if def_z and def_z > img.getSizeZ():
+            msg = ("Inconsistent default Z plane. Expected to set %s but the"
+                   " image dimension is %s" % (def_z, img.getSizeZ()))
+            if strict:
+                self.ctx.die(msg)
+            else:
+                # Attempt to auto-correct the default T plane for single
+                # timepoint images
+                self.ctx.dbg(msg + ". Ignoring.")
+                def_z = None
+        if def_t and def_t > img.getSizeT():
+            msg = ("Inconsistent default T plane. Expected to set %s but the"
+                   " image dimension is %s" % (def_t, img.getSizeT()))
+            if strict:
+                self.ctx.die(107, msg)
+            else:
+                # Attempt to auto-correct the default T plane for single
+                # timepoint images
+                self.ctx.dbg(msg + ". Ignoring.")
+                def_t = None
+        return (def_z, def_t)
+
     @gateway_required
     def set(self, args):
         newchannels = {}
@@ -583,6 +611,9 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
+
+            (def_z, def_t) = self.validate_defaults(
+                img, def_z, def_t, strict=args.ignore_errors)
 
             reactivatechannels = []
             if not args.disable:

@@ -317,3 +317,22 @@ class TestRender(CLITest):
         self.args += ["set", self.idonly, str(rdfile)]
         with pytest.raises(NonZeroReturnCode):
             self.cli.invoke(self.args, strict=True)
+
+    @pytest.mark.parametrize('z, t', [
+        (6, None), (6, 8), [None, 8)]])
+    def test_invalid_defaults2(self, z, t, tmpdir):
+        self.create_image(sizez=5, sizet=6)
+        rd = self.get_render_def(z=z, t=t)
+        rdfile = tmpdir.join('render-test-invaliddefaults2.json')
+        rdfile.write(json.dumps(rd))
+
+        # Default behavior should be to error on mismatching
+        # plane index/image dimensions
+        self.args += ["set", self.idonly, str(rdfile)]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(self.args, strict=True)
+
+        # With ignore-errors, the default planes should be ignored
+        self.args += ["set", "--ignore-errors", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
