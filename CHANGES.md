@@ -2,7 +2,7 @@ CHANGES
 =======
 
 
-0.4.0a4
+0.4.0a5
 -------
 
 *   Drop Python 2.6 support
@@ -12,6 +12,7 @@ CHANGES
     [#22](https://github.com/ome/omero-cli-render/pull/22)
 *   CLI render version 2: add support for settings default z/t planes
     [#23](https://github.com/ome/omero-cli-render/pull/23)
+    [#24](https://github.com/ome/omero-cli-render/pull/24)
 *   Add logic for render version detection logic
     [#20](https://github.com/ome/omero-cli-render/pull/20)
 *   Review integration tests
