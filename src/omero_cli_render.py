@@ -80,28 +80,33 @@ SET_HELP = """Set rendering settings
     # key (required), and an optional top-level greyscale key (True: greyscale,
     # False: color). Channel elements are index:dictionaries of the form:
 
-    channels:
-      <index>: (Channel-index, int, 1-based)
-        color: <HTML RGB triplet>
-        label: <Channel name>
-        min: <Minimum (float)>
-        max: <Maximum (float)>
-        active: <Active (bool)>
-      <index>:
+    channels:                       Required
+      <int>:                        Channel index, 1-based
+        active: <bool>              Active channel
+        color: <string>             Channel color as HTML RGB triplet
+        label: <string>             Channel name
+        start: <float>              Start of the rendering window, optional
+        end: <float>                End of the rendering window, optional
+      <int>:
         ...
-    greyscale: <(bool)>
+    greyscale: <bool>               Greyscale rendering, optional
+    z: <int>                        Default Z plane index, 1-based, optional
+    t: <int>                        Default T plane index, 1-based, optional
 
     For example:
+
     channels:
       1:
         color: "FF0000"
         label: "Red"
-        min: 1
-        max: 255
+        start: 10.0
+        end: 248.0
         active: True
       2:
         color: "00FF00"
       ...
+    z: 5
+    t: 1
 
     # Omitted fields will keep their current values.
     # If the file specifies to turn off a channel (active: False) then the
@@ -374,6 +379,9 @@ class RenderControl(BaseControl):
                 "--disable", help="Disable non specified channels ",
                 action="store_true")
             x.add_argument(
+                "--ignore-errors", help="Do not error on mismatching"
+                " rendering settings", action="store_true")
+            x.add_argument(
                 "channels",
                 help="Local file or OriginalFile:ID which specifies the "
                      "rendering settings")
@@ -518,6 +526,40 @@ class RenderControl(BaseControl):
             self.ctx.dbg("Image:%s got thumbnail in %2.2fs" % (
                 img.id, stop - start))
 
+    def _read_default_planes(self, img, data, ignore_errors=False):
+        """Read and validate the default planes"""
+
+        # Read values from dictionary
+        def_z = data['z'] if 'z' in data else None
+        def_t = data['t'] if 't' in data else None
+
+        # Minimal validation: default planes should be 1-indexed integers
+        if (def_z is not None) and (def_z < 1 or int(def_z) != def_z):
+            self.ctx.die(
+                105, "Invalid default Z plane: %s" % def_z)
+        if (def_t is not None) and (def_t < 1 or int(def_t) != def_t):
+            self.ctx.die(
+                105, "Invalid default T plane: %s" % def_t)
+
+        # Validate default plane index against image dimensions
+        if def_z and def_z > img.getSizeZ():
+            msg = ("Inconsistent default Z plane. Expected to set %s but the"
+                   " image dimension is %s" % (def_z, img.getSizeZ()))
+            if not ignore_errors:
+                self.ctx.die(106, msg)
+            else:
+                self.ctx.dbg(msg + ". Ignoring.")
+                def_z = None
+        if def_t and def_t > img.getSizeT():
+            msg = ("Inconsistent default T plane. Expected to set %s but the"
+                   " image dimension is %s" % (def_t, img.getSizeT()))
+            if not ignore_errors:
+                self.ctx.die(106, msg)
+            else:
+                self.ctx.dbg(msg + ". Ignoring.")
+                def_t = None
+        return (def_z, def_t)
+
     @gateway_required
     def set(self, args):
         newchannels = {}
@@ -532,9 +574,7 @@ class RenderControl(BaseControl):
                               " version or use either start/end or min/max"
                               " (not both).")
 
-        def_z = data['z'] if 'z' in data else None
-        def_t = data['t'] if 't' in data else None
-
+        # Read channel setttings from rendering dictionary
         for chindex, chdict in data['channels'].iteritems():
             try:
                 cindex = int(chindex)
@@ -575,6 +615,9 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
+
+            (def_z, def_t) = self._read_default_planes(
+                img, data, ignore_errors=args.ignore_errors)
 
             reactivatechannels = []
             if not args.disable:

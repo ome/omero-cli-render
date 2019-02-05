@@ -156,9 +156,9 @@ class TestRender(CLITest):
 
         if greyscale is not None:
             d['greyscale'] = greyscale
-        if t:
+        if t is not None:
             d['t'] = t
-        if z:
+        if z is not None:
             d['z'] = z
         for k in xrange(sizec, 4):
             del channels[k + 1]
@@ -191,12 +191,12 @@ class TestRender(CLITest):
             else:
                 self.assert_image_rmodel(img, rdef.get('greyscale'))
 
-            if 't' in rdef:
+            if 't' in rdef and rdef['t'] <= img.getSizeT():
                 assert img.getDefaultT() == rdef.get('t') - 1
             else:
                 # If not set, default T plane is the first one
                 assert img.getDefaultT() == 0
-            if 'z' in rdef:
+            if 'z' in rdef and rdef['z'] <= img.getSizeZ():
                 assert img.getDefaultZ() == rdef.get('z') - 1
             else:
                 # If not set, default Z plane is the middle one
@@ -295,8 +295,44 @@ class TestRender(CLITest):
     def test_set_defaults(self, z, t, tmpdir):
         self.create_image(sizez=10, sizet=15)
         rd = self.get_render_def(z=z, t=t)
-        rdfile = tmpdir.join('render-test-setdefaultz.json')
+        rdfile = tmpdir.join('render-test-setdefaults.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
+
+    @pytest.mark.parametrize('invalid_value', [0, 0.5])
+    def test_set_invalid_defaults(self, invalid_value, tmpdir):
+        self.create_image()
+        rd = self.get_render_def(z=invalid_value)
+        rdfile = tmpdir.join('render-test-setinvaliddefaults.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(self.args, strict=True)
+
+        rd = self.get_render_def(t=invalid_value)
+        rdfile = tmpdir.join('render-test-setinvaliddefaults.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(self.args, strict=True)
+
+    @pytest.mark.parametrize('z, t', [
+        (6, None), (6, 8), (None, 8)])
+    def test_set_invalid_defaults2(self, z, t, tmpdir):
+        self.create_image(sizez=5, sizet=6)
+        rd = self.get_render_def(z=z, t=t)
+        rdfile = tmpdir.join('render-test-setinvaliddefaults2.json')
+        rdfile.write(json.dumps(rd))
+
+        # Default behavior should be to error on mismatching
+        # plane index/image dimensions
+        self.args += ["set", self.idonly, str(rdfile)]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(self.args, strict=True)
+
+        # With ignore-errors, the default planes should be ignored
+        self.args += ["--ignore-errors"]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
