@@ -2,8 +2,8 @@ CHANGES
 =======
 
 
-0.4.0a5
--------
+0.4.0
+-----
 
 *   Drop Python 2.6 support
     [#17](https://github.com/ome/omero-cli-render/pull/17)
