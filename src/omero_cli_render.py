@@ -20,6 +20,7 @@
 
 import sys
 import time
+import yaml
 
 from functools import wraps
 
@@ -466,6 +467,10 @@ class RenderControl(BaseControl):
             ro = RenderObject(img)
             if args.style == 'plain':
                 self.ctx.out(ro)
+            elif args.style == 'yaml':
+                self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
+                             width=80, indent=4,
+                             default_flow_style=False).rstrip())
             else:
                 if not first:
                     self.ctx.die(
