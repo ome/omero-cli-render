@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+0.4.1
+-----
+
+*   Make output of `render info --style yaml` subcommand yamllint compliant
+    [#26](https://github.com/ome/omero-cli-render/pull/26)
+    [#27](https://github.com/ome/omero-cli-render/pull/27)
 
 0.4.0
 -----
