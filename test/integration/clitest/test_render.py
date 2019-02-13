@@ -26,6 +26,7 @@ from omero_cli_render import RenderControl
 from omero.cli import NonZeroReturnCode
 from cli import CLITest
 from omero.gateway import BlitzGateway
+import os.path
 
 
 # TODO: rdefid, tbid
@@ -242,12 +243,18 @@ class TestRender(CLITest):
         self.cli.invoke(self.args, strict=True)
 
     @pytest.mark.parametrize('style', ['json', 'yaml'])
-    def test_info_style(self, style):
+    def test_info_style(self, style, capsys):
         self.create_image()
         target = self.imageid
         self.args += ["info", target]
         self.args += ['--style', style]
         self.cli.invoke(self.args, strict=True)
+        out, err = capsys.readouterr()
+
+        dir_name = os.path.dirname(os.path.abspath(__file__))
+        expected_file = {'json': 'info.json', 'yaml': 'info.yml'}
+        with open(os.path.join(dir_name, expected_file[style]), 'r') as f:
+            assert out == f.read()
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_copy(self, target_name, tmpdir):
