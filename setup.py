@@ -117,6 +117,7 @@ setup(
     author='The Open Microscopy Team',
     author_email='ome-devel@lists.openmicroscopy.org.uk',
     license='GPL-2.0+',
+    install_requires=['PyYAML'],
     url='%s' % url,
     zip_safe=False,
     download_url='%s/v%s.tar.gz' % (url, version),
