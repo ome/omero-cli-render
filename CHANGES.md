@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+0.4.2
+-----
+
+*   Declare `PyYAML` as a package dependency
+    [#28](https://github.com/ome/omero-cli-render/pull/28)
+
 0.4.1
 -----
 
