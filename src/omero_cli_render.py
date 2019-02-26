@@ -143,14 +143,16 @@ def _set_if_not_none(dictionary, k, v):
 
 
 def _getversion(dictionary):
-    """ Returns the version of the rendering settings format
-    or 0 if it cannot be determined.
-
-    Arguments:
-    dictionary -- The rendering settings as dictionary
-
-    Note: Previously min/max was used to set the channel window start/end
+    """
+    Returns the version of the rendering settings format.
+    Npte: Previously min/max was used to set the channel window start/end
     From version 2 on start/end will be used.
+
+    Parameters:
+    dictionary (dictionary): The rendering settings as dictionary
+
+    Returns:
+    int: The version or 0 if it cannot be determined
     """
 
     if 'version' not in dictionary:
@@ -168,12 +170,13 @@ def _getversion(dictionary):
 
 
 class ChannelObject(object):
-    """ Represents the rendering settings of a channel
+    """
+    Represents the rendering settings of a channel
 
-        Arguments:
-        channel -- The rendering settings as dictionary
-        version -- The version of the renderings settings format
-                   (optional; default: latest)
+    Parameters:
+    channel (IObject): The rendering settings as dictionary
+    version (int):     The version of the renderings settings format
+                       (optional; default: latest)
     """
 
     def __init__(self, channel, version=SPEC_VERSION):
@@ -406,6 +409,18 @@ class RenderControl(BaseControl):
         return obj
 
     def render_images(self, gateway, object, batch=100):
+        """
+        Get the images.
+
+        Parameters:
+            gateway (BlitzGateway): The gateway
+            object (IObject): The parent object (Project, Dataset, S, P, W)
+            batch (int): The batch size
+
+        Returns:
+            Generator: List of images (IObjects)
+        """
+
         if isinstance(object, list):
             for x in object:
                 for rv in self.render_images(gateway, x, batch):
@@ -462,6 +477,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def info(self, args):
+        """ Implements the 'info' command """
         first = True
         for img in self.render_images(self.gateway, args.object, batch=1):
             ro = RenderObject(img)
@@ -481,6 +497,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def copy(self, args):
+        """ Implements the 'copy' command """
         self._copy(self.gateway, args.object, args.target, args.skipthumbs)
 
     def _copy(self, gateway, obj, target, skipthumbs):
@@ -567,6 +584,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def set(self, args):
+        """ Implements the 'set' command """
         newchannels = {}
         data = pydict_text_io.load(
             args.channels, session=self.client.getSession())
@@ -670,6 +688,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def test(self, args):
+        """ Implements the 'test' command """
         self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
         for img in self.render_images(self.gateway, args.object, batch=1):
             self.test_per_pixel(
