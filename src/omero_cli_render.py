@@ -498,36 +498,30 @@ class RenderControl(BaseControl):
     @gateway_required
     def copy(self, args):
         """ Implements the 'copy' command """
-        self._copy(self.gateway, args.object, args.target, args.skipthumbs)
+        for src_img in self.render_images(self.gateway, args.object, batch=1):
+            for targets in self.render_images(self.gateway, args.target):
+                batch = dict()
+                for target in targets:
+                    if target.id == src_img.id:
+                        self.ctx.err(
+                            "Skipping: Image:%s itself" % target.id)
+                    else:
+                        batch[target.id] = target
 
-    def _copy(self, gateway, obj, target, skipthumbs):
-        for src_img in self.render_images(gateway, obj, batch=1):
-            self._copy_single(gateway, src_img, target, skipthumbs)
+                if not batch:
+                    continue
 
-    def _copy_single(self, gateway, src_img, target, skipthumbs):
-        for targets in self.render_images(gateway, target):
-            batch = dict()
-            for target in targets:
-                if target.id == src_img.id:
-                    self.ctx.err(
-                        "Skipping: Image:%s itself" % target.id)
-                else:
-                    batch[target.id] = target
+                rv = self.gateway.applySettingsToSet(src_img.id, "Image",
+                                                     batch.keys())
+                for missing in rv[False]:
+                    self.ctx.err("Error: Image:%s" % missing)
+                    del batch[missing]
 
-            if not batch:
-                continue
+                self.ctx.out("Rendering settings successfully copied \
+                              to %d images." % len(rv[True]))
 
-            rv = gateway.applySettingsToSet(src_img.id, "Image",
-                                            batch.keys())
-            for missing in rv[False]:
-                self.ctx.err("Error: Image:%s" % missing)
-                del batch[missing]
-
-            self.ctx.out("Rendering settings successfully copied to %d images."
-                         % len(rv[True]))
-
-            if not skipthumbs:
-                self._generate_thumbs(batch.values())
+                if not args.skipthumbs:
+                    self._generate_thumbs(batch.values())
 
     def update_channel_names(self, gateway, obj, namedict):
         for targets in self.render_images(gateway, obj):
