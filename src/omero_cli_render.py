@@ -656,6 +656,7 @@ class RenderControl(BaseControl):
                 "Updated rendering settings for Image:%s" % img.id)
             if not args.skipthumbs:
                 self._generate_thumbs([img])
+            img._closeRE()
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
