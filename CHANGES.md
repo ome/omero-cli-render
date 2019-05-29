@@ -1,6 +1,13 @@
 CHANGES
 =======
 
+
+0.4.3
+-----
+
+*   Actively close rendering services when applying `render set` to a
+    collection of images [#29](https://github.com/ome/omero-cli-render/pull/29)
+
 0.4.2
 -----
 
