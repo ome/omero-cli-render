@@ -663,15 +663,16 @@ class RenderControl(BaseControl):
             if def_t:
                 img.setDefaultT(def_t - 1)
 
-            img.saveDefaults()
-            self.ctx.dbg(
-                "Updated rendering settings for Image:%s" % img.id)
-            if not args.skipthumbs:
-                self._generate_thumbs([img])
             try:
-                img._closeRE()
+                img.saveDefaults()
+                self.ctx.dbg(
+                    "Updated rendering settings for Image:%s" % img.id)
+                if not args.skipthumbs:
+                    self._generate_thumbs([img])
             except Exception as e:
                 self.ctx.err('ERROR: %s' % e)
+            finally:
+                img._closeRE()
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
