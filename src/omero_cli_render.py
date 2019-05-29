@@ -143,14 +143,16 @@ def _set_if_not_none(dictionary, k, v):
 
 
 def _getversion(dictionary):
-    """ Returns the version of the rendering settings format
-    or 0 if it cannot be determined.
-
-    Arguments:
-    dictionary -- The rendering settings as dictionary
-
+    """
+    Returns the version of the rendering settings format.
     Note: Previously min/max was used to set the channel window start/end
     From version 2 on start/end will be used.
+
+    Parameters:
+    dictionary (dictionary): The rendering settings as dictionary
+
+    Returns:
+    int: The version or 0 if it cannot be determined
     """
 
     if 'version' not in dictionary:
@@ -168,12 +170,13 @@ def _getversion(dictionary):
 
 
 class ChannelObject(object):
-    """ Represents the rendering settings of a channel
+    """
+    Represents the rendering settings of a channel
 
-        Arguments:
-        channel -- The rendering settings as dictionary
-        version -- The version of the renderings settings format
-                   (optional; default: latest)
+    Parameters:
+    channel (IObject): The rendering settings as dictionary
+    version (int):     The version of the renderings settings format
+                       (optional; default: latest)
     """
 
     def __init__(self, channel, version=SPEC_VERSION):
@@ -406,6 +409,18 @@ class RenderControl(BaseControl):
         return obj
 
     def render_images(self, gateway, object, batch=100):
+        """
+        Get the images.
+
+        Parameters:
+            gateway (BlitzGateway): The gateway
+            object (IObject): The parent object (Project, Dataset, S, P, W)
+            batch (int): The batch size
+
+        Returns:
+            Generator: List of images (IObjects)
+        """
+
         if isinstance(object, list):
             for x in object:
                 for rv in self.render_images(gateway, x, batch):
@@ -462,6 +477,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def info(self, args):
+        """ Implements the 'info' command """
         first = True
         for img in self.render_images(self.gateway, args.object, batch=1):
             ro = RenderObject(img)
@@ -481,36 +497,31 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def copy(self, args):
-        self._copy(self.gateway, args.object, args.target, args.skipthumbs)
+        """ Implements the 'copy' command """
+        for src_img in self.render_images(self.gateway, args.object, batch=1):
+            for targets in self.render_images(self.gateway, args.target):
+                batch = dict()
+                for target in targets:
+                    if target.id == src_img.id:
+                        self.ctx.err(
+                            "Skipping: Image:%s itself" % target.id)
+                    else:
+                        batch[target.id] = target
 
-    def _copy(self, gateway, obj, target, skipthumbs):
-        for src_img in self.render_images(gateway, obj, batch=1):
-            self._copy_single(gateway, src_img, target, skipthumbs)
+                if not batch:
+                    continue
 
-    def _copy_single(self, gateway, src_img, target, skipthumbs):
-        for targets in self.render_images(gateway, target):
-            batch = dict()
-            for target in targets:
-                if target.id == src_img.id:
-                    self.ctx.err(
-                        "Skipping: Image:%s itself" % target.id)
-                else:
-                    batch[target.id] = target
+                rv = self.gateway.applySettingsToSet(src_img.id, "Image",
+                                                     batch.keys())
+                for missing in rv[False]:
+                    self.ctx.err("Error: Image:%s" % missing)
+                    del batch[missing]
 
-            if not batch:
-                continue
+                self.ctx.out("Rendering settings successfully copied \
+                              to %d images." % len(rv[True]))
 
-            rv = gateway.applySettingsToSet(src_img.id, "Image",
-                                            batch.keys())
-            for missing in rv[False]:
-                self.ctx.err("Error: Image:%s" % missing)
-                del batch[missing]
-
-            self.ctx.out("Rendering settings successfully copied to %d images."
-                         % len(rv[True]))
-
-            if not skipthumbs:
-                self._generate_thumbs(batch.values())
+                if not args.skipthumbs:
+                    self._generate_thumbs(batch.values())
 
     def update_channel_names(self, gateway, obj, namedict):
         for targets in self.render_images(gateway, obj):
@@ -567,6 +578,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def set(self, args):
+        """ Implements the 'set' command """
         newchannels = {}
         data = pydict_text_io.load(
             args.channels, session=self.client.getSession())
@@ -651,11 +663,16 @@ class RenderControl(BaseControl):
             if def_t:
                 img.setDefaultT(def_t - 1)
 
-            img.saveDefaults()
-            self.ctx.dbg(
-                "Updated rendering settings for Image:%s" % img.id)
-            if not args.skipthumbs:
-                self._generate_thumbs([img])
+            try:
+                img.saveDefaults()
+                self.ctx.dbg(
+                    "Updated rendering settings for Image:%s" % img.id)
+                if not args.skipthumbs:
+                    self._generate_thumbs([img])
+            except Exception as e:
+                self.ctx.err('ERROR: %s' % e)
+            finally:
+                img._closeRE()
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
@@ -669,6 +686,7 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def test(self, args):
+        """ Implements the 'test' command """
         self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
         for img in self.render_images(self.gateway, args.object, batch=1):
             self.test_per_pixel(
