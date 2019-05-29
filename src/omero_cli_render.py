@@ -145,7 +145,7 @@ def _set_if_not_none(dictionary, k, v):
 def _getversion(dictionary):
     """
     Returns the version of the rendering settings format.
-    Npte: Previously min/max was used to set the channel window start/end
+    Note: Previously min/max was used to set the channel window start/end
     From version 2 on start/end will be used.
 
     Parameters:
