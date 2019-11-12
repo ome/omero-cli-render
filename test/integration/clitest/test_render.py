@@ -19,6 +19,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import json
 import pytest
 
@@ -161,7 +165,7 @@ class TestRender(CLITest):
             d['t'] = t
         if z is not None:
             d['z'] = z
-        for k in xrange(sizec, 4):
+        for k in range(sizec, 4):
             del channels[k + 1]
         d['version'] = version
         return d
@@ -179,7 +183,7 @@ class TestRender(CLITest):
             # the RenderingEngine but then Nones are returned later.
             channels = img.getChannels()
             assert len(channels) == len(rdef['channels'])
-            for c in xrange(len(channels)):
+            for c in range(len(channels)):
                 self.assert_channel_rdef(
                     channels[c], rdef['channels'][c + 1],
                     version=rdef['version'])
@@ -201,7 +205,7 @@ class TestRender(CLITest):
                 assert img.getDefaultZ() == rdef.get('z') - 1
             else:
                 # If not set, default Z plane is the middle one
-                assert img.getDefaultZ() == (int)(img.getSizeZ() / 2)
+                assert img.getDefaultZ() == (int)(old_div(img.getSizeZ(), 2))
 
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']

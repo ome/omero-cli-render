@@ -18,6 +18,11 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from __future__ import print_function
+from past.builtins import long
+from builtins import str
+from builtins import range
+from builtins import object
 import sys
 import time
 import yaml
@@ -156,7 +161,7 @@ def _getversion(dictionary):
     """
 
     if 'version' not in dictionary:
-        for chindex, chdict in dictionary['channels'].iteritems():
+        for chindex, chdict in dictionary['channels'].items():
             if ('start' in chdict or 'end' in chdict) and\
                ('min' in chdict or 'max' in chdict):
                 return 0
@@ -286,8 +291,8 @@ class RenderObject(object):
             self.zoomLevelScaling = image.getZoomLevelScaling()
 
         self.range = image.getPixelRange()
-        self.channels = map(lambda x: ChannelObject(x),
-                            image.getChannels(noRE=False))
+        self.channels = [
+            ChannelObject(x) for x in image.getChannels(noRE=False)]
         self.model = image.isGreyscaleRenderingModel() and \
             'greyscale' or 'color'
         self.projection = image.getProjection()
@@ -512,7 +517,7 @@ class RenderControl(BaseControl):
                     continue
 
                 rv = self.gateway.applySettingsToSet(src_img.id, "Image",
-                                                     batch.keys())
+                                                     list(batch.keys()))
                 for missing in rv[False]:
                     self.ctx.err("Error: Image:%s" % missing)
                     del batch[missing]
@@ -521,7 +526,7 @@ class RenderControl(BaseControl):
                               to %d images." % len(rv[True]))
 
                 if not args.skipthumbs:
-                    self._generate_thumbs(batch.values())
+                    self._generate_thumbs(list(batch.values()))
 
     def update_channel_names(self, gateway, obj, namedict):
         for targets in self.render_images(gateway, obj):
@@ -592,7 +597,7 @@ class RenderControl(BaseControl):
                               " (not both).")
 
         # Read channel setttings from rendering dictionary
-        for chindex, chdict in data['channels'].iteritems():
+        for chindex, chdict in data['channels'].items():
             try:
                 cindex = int(chindex)
             except Exception as e:
@@ -603,7 +608,7 @@ class RenderControl(BaseControl):
             try:
                 cobj = ChannelObject(chdict, version)
                 newchannels[cindex] = cobj
-                print '%d:%s' % (cindex, cobj)
+                print('%d:%s' % (cindex, cobj))
             except Exception as e:
                 self.ctx.err('ERROR: %s' % e)
                 self.ctx.die(
@@ -611,7 +616,7 @@ class RenderControl(BaseControl):
 
         try:
             greyscale = data['greyscale']
-            print 'greyscale=%s' % data['greyscale']
+            print('greyscale=%s' % data['greyscale'])
         except KeyError:
             greyscale = None
 
@@ -619,7 +624,7 @@ class RenderControl(BaseControl):
         cindices = []
         rangelist = []
         colourlist = []
-        for (i, c) in newchannels.iteritems():
+        for (i, c) in newchannels.items():
             if c.label:
                 namedict[i] = c.label
             if c.active is False:
@@ -706,7 +711,7 @@ class RenderControl(BaseControl):
         try:
             rps.setPixelsId(long(pixid), False, fail)
             msg = "ok:"
-        except Exception, e:
+        except Exception as e:
             error = e
             msg = "miss:"
 
@@ -719,7 +724,7 @@ class RenderControl(BaseControl):
             except KeyboardInterrupt:
                 msg = "cancel:"
                 pass
-            except Exception, e:
+            except Exception as e:
                 msg = "fail:"
                 error = e
             finally:
@@ -730,7 +735,7 @@ class RenderControl(BaseControl):
         elif thumb:
             tb = client.sf.createThumbnailStore()
             try:
-                tb.setPixelsId(long(pixid), ctx)
+                tb.setPixelsId(int(pixid), ctx)
                 tb.getThumbnailByLongestSide(rint(96), ctx)
             finally:
                 tb.close()
