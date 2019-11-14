@@ -127,5 +127,5 @@ setup(
     download_url='%s/v%s.tar.gz' % (url, version),
     keywords=['OMERO.CLI', 'plugin'],
     cmdclass={'test': PyTest},
-    tests_require=['pytest', 'restview', 'mox'],
+    tests_require=['pytest', 'restview', 'mox3'],
 )
