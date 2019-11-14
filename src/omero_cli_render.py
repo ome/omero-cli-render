@@ -25,6 +25,7 @@ from builtins import range
 from builtins import object
 import sys
 import time
+import json
 import yaml
 
 from functools import wraps
@@ -497,7 +498,8 @@ class RenderControl(BaseControl):
                     self.ctx.die(
                         103,
                         "Output styles not supported for multiple images")
-                self.ctx.out(pydict_text_io.dump(ro.to_dict(), args.style))
+                self.ctx.out(json.dumps(
+                    ro.to_dict(), sort_keys=True, indent=4))
                 first = False
 
     @gateway_required
