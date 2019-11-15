@@ -38,11 +38,6 @@ SUPPORTED = [
     "idonly", "imageid", "plateid", "screenid", "datasetid", "projectid"]
 
 
-@pytest.fixture(autouse=True)
-def setup(monkeypatch):
-    monkeypatch.setenv("OMERODIR", "/opt/omero/server/OMERO.server")
-
-
 class TestRender(CLITest):
 
     def setup_method(self, method):
