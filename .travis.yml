@@ -4,9 +4,6 @@ sudo: required
 services:
   - docker
 
-env:
-  - OMERO_SERVER_VERSION=5.6.0-m1-0
-
 before_install:
   - git clone --recurse-submodules git://github.com/openmicroscopy/omero-test-infra .omero
 
