@@ -246,7 +246,7 @@ class TestRender(CLITest):
         self.args += ["info", target]
         self.cli.invoke(self.args, strict=True)
 
-    @pytest.mark.parametrize('style', ['json', 'yaml'])
+    @pytest.mark.parametrize('style', ['plain', 'json', 'yaml'])
     def test_info_style(self, style, capsys):
         self.create_image()
         target = self.imageid
@@ -256,9 +256,11 @@ class TestRender(CLITest):
         out, err = capsys.readouterr()
 
         dir_name = os.path.dirname(os.path.abspath(__file__))
-        expected_file = {'json': 'info.json', 'yaml': 'info.yml'}
+        expected_file = {
+            'plain': 'info.plain', 'json': 'info.json', 'yaml': 'info.yml'}
         with open(os.path.join(dir_name, expected_file[style]), 'r') as f:
             assert out == f.read()
+        assert 'Error printing text' not in err
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_copy(self, target_name, tmpdir):
