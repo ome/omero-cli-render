@@ -488,7 +488,7 @@ class RenderControl(BaseControl):
         for img in self.render_images(self.gateway, args.object, batch=1):
             ro = RenderObject(img)
             if args.style == 'plain':
-                self.ctx.out(ro)
+                self.ctx.out(str(ro))
             elif args.style == 'yaml':
                 self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
                              width=80, indent=4,
