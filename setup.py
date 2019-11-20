@@ -91,7 +91,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-version = '0.4.4.dev1'
+version = '0.5.dev1'
 url = "https://github.com/ome/omero-cli-render/"
 
 setup(
@@ -117,11 +117,15 @@ setup(
     author='The Open Microscopy Team',
     author_email='ome-devel@lists.openmicroscopy.org.uk',
     license='GPL-2.0+',
-    install_requires=['PyYAML'],
+    install_requires=[
+        'PyYAML',
+        'omero-py>=5.6.dev4',
+        'future'
+        ],
     url='%s' % url,
     zip_safe=False,
     download_url='%s/v%s.tar.gz' % (url, version),
     keywords=['OMERO.CLI', 'plugin'],
     cmdclass={'test': PyTest},
-    tests_require=['pytest', 'restview', 'mox'],
+    tests_require=['pytest', 'restview', 'mox3'],
 )
