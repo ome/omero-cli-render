@@ -1,4 +1,4 @@
-rdefv1: model=color, z=0, t=0
+rdefv2: model=color, z=0, t=0
 tiles: False
 ch0: active=True,color=FF0000,label=0,min=0.0,start=0.0,end=255.0,max=255.0
 ch1: active=True,color=00FF00,label=1,min=0.0,start=0.0,end=255.0,max=255.0
