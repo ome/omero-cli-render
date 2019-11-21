@@ -23,6 +23,7 @@ from past.builtins import long
 from builtins import str
 from builtins import range
 from builtins import object
+import concurrent.futures
 import sys
 import time
 import json
@@ -396,6 +397,11 @@ class RenderControl(BaseControl):
                 help="Local file or OriginalFile:ID which specifies the "
                      "rendering settings")
 
+        set_cmd.add_argument(
+            "--batch", type=int,
+            help="Batch size to process simultaneously"
+        )
+
         test.add_argument(
             "--force", action="store_true",
             help="Force creation of pixel data file in binary "
@@ -414,7 +420,7 @@ class RenderControl(BaseControl):
             self.ctx.die(110, "No such %s: %s" % (type, oid))
         return obj
 
-    def render_images(self, gateway, object, batch=100):
+    def load_images(self, gateway, object, batch=100):
         """
         Get the images.
 
@@ -429,12 +435,12 @@ class RenderControl(BaseControl):
 
         if isinstance(object, list):
             for x in object:
-                for rv in self.render_images(gateway, x, batch):
+                for rv in self.load_images(gateway, x, batch):
                     yield rv
         elif isinstance(object, Screen):
             scr = self._lookup(gateway, "Screen", object.id)
             for plate in scr.listChildren():
-                for rv in self.render_images(gateway, plate._obj, batch):
+                for rv in self.load_images(gateway, plate._obj, batch):
                     yield rv
         elif isinstance(object, Plate):
             plt = self._lookup(gateway, "Plate", object.id)
@@ -455,7 +461,7 @@ class RenderControl(BaseControl):
         elif isinstance(object, Project):
             prj = self._lookup(gateway, "Project", object.id)
             for ds in prj.listChildren():
-                for rv in self.render_images(gateway, ds._obj, batch):
+                for rv in self.load_images(gateway, ds._obj, batch):
                     yield rv
 
         elif isinstance(object, Dataset):
@@ -485,7 +491,7 @@ class RenderControl(BaseControl):
     def info(self, args):
         """ Implements the 'info' command """
         first = True
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.load_images(self.gateway, args.object, batch=1):
             ro = RenderObject(img)
             if args.style == 'plain':
                 self.ctx.out(ro)
@@ -505,8 +511,8 @@ class RenderControl(BaseControl):
     @gateway_required
     def copy(self, args):
         """ Implements the 'copy' command """
-        for src_img in self.render_images(self.gateway, args.object, batch=1):
-            for targets in self.render_images(self.gateway, args.target):
+        for src_img in self.load_images(self.gateway, args.object, batch=1):
+            for targets in self.load_images(self.gateway, args.target):
                 batch = dict()
                 for target in targets:
                     if target.id == src_img.id:
@@ -583,9 +589,58 @@ class RenderControl(BaseControl):
                 def_t = None
         return (def_z, def_t)
 
+    def _set_rend(self, args, data, img, cindices, greyscale, rangelist, colorlist):
+        """Set the renderings settings for one image"""
+        (def_z, def_t) = self._read_default_planes(
+            img, data, ignore_errors=args.ignore_errors)
+
+        reactivatechannels = []
+        if not args.disable:
+            # Calling set_active_channels will disable channels which
+            # are not specified, have to keep track of them and
+            # re-activate them later again
+            imgchannels = img.getChannels()
+            for ci, ch in enumerate(imgchannels, 1):
+                if ci not in cindices and -ci not in cindices \
+                        and ch.isActive():
+                    reactivatechannels.append(ci)
+
+        img.set_active_channels(
+            cindices, windows=rangelist, colors=colorlist)
+        if greyscale is not None:
+            if greyscale:
+                img.setGreyscaleRenderingModel()
+            else:
+                img.setColorRenderingModel()
+
+        if len(reactivatechannels) > 0:
+            img.set_active_channels(reactivatechannels)
+
+        if def_z:
+            img.setDefaultZ(def_z - 1)
+        if def_t:
+            img.setDefaultT(def_t - 1)
+
+        try:
+            img.saveDefaults()
+            self.ctx.dbg(
+                "Updated rendering settings for Image:%s" % img.id)
+            if not args.skipthumbs:
+                img.getThumbnail(size=(96,), direct=False, use_cached_ts=False)
+        except Exception as e:
+            self.ctx.err('ERROR: %s' % e)
+        finally:
+            img._closeRE()
+        return img.id
+
     @gateway_required
     def set(self, args):
         """ Implements the 'set' command """
+        if args.batch:
+            batch = args.batch
+        else:
+            batch = 1
+
         newchannels = {}
         data = pydict_text_io.load(
             args.channels, session=self.client.getSession())
@@ -625,7 +680,7 @@ class RenderControl(BaseControl):
         namedict = {}
         cindices = []
         rangelist = []
-        colourlist = []
+        colorlist = []
         for (i, c) in newchannels.items():
             if c.label:
                 namedict[i] = c.label
@@ -634,52 +689,28 @@ class RenderControl(BaseControl):
             else:
                 cindices.append(i)
             rangelist.append([c.start, c.end])
-            colourlist.append(c.color)
+            colorlist.append(c.color)
 
         iids = []
-        for img in self.render_images(self.gateway, args.object, batch=1):
-            iids.append(img.id)
 
-            (def_z, def_t) = self._read_default_planes(
-                img, data, ignore_errors=args.ignore_errors)
+        if batch > 1:
+            for img_batch in self.load_images(self.gateway, args.object, batch=batch):
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future_image = { executor.submit(self._set_rend, args, data,
+                                                     img, cindices, greyscale, rangelist,
+                                                     colorlist): img for img in img_batch}
+                    for future in concurrent.futures.as_completed(future_image):
+                        img = future_image[future]
+                        try:
+                            iid = future.result()
+                            iids.append(iid)
+                        except Exception as exc:
+                            print('%d generated an exception: %s' % (img.id, exc))
 
-            reactivatechannels = []
-            if not args.disable:
-                # Calling set_active_channels will disable channels which
-                # are not specified, have to keep track of them and
-                # re-activate them later again
-                imgchannels = img.getChannels()
-                for ci, ch in enumerate(imgchannels, 1):
-                    if ci not in cindices and -ci not in cindices\
-                            and ch.isActive():
-                        reactivatechannels.append(ci)
-
-            img.set_active_channels(
-                cindices, windows=rangelist, colors=colourlist)
-            if greyscale is not None:
-                if greyscale:
-                    img.setGreyscaleRenderingModel()
-                else:
-                    img.setColorRenderingModel()
-
-            if len(reactivatechannels) > 0:
-                img.set_active_channels(reactivatechannels)
-
-            if def_z:
-                img.setDefaultZ(def_z - 1)
-            if def_t:
-                img.setDefaultT(def_t - 1)
-
-            try:
-                img.saveDefaults()
-                self.ctx.dbg(
-                    "Updated rendering settings for Image:%s" % img.id)
-                if not args.skipthumbs:
-                    self._generate_thumbs([img])
-            except Exception as e:
-                self.ctx.err('ERROR: %s' % e)
-            finally:
-                img._closeRE()
+        else:
+            for img in self.load_images(self.gateway, args.object, batch=1):
+                iid = self._set_rend(args, data, img, cindices, greyscale, rangelist, colorlist)
+                iids.append(iid)
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
@@ -695,7 +726,7 @@ class RenderControl(BaseControl):
     def test(self, args):
         """ Implements the 'test' command """
         self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.load_images(self.gateway, args.object, batch=1):
             self.test_per_pixel(
                 self.client, img.getPrimaryPixels().id, args.force, args.thumb)
 
