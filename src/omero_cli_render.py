@@ -589,7 +589,8 @@ class RenderControl(BaseControl):
                 def_t = None
         return (def_z, def_t)
 
-    def _set_rend(self, args, data, img, cindices, greyscale, rangelist, colorlist):
+    def _set_rend(self, args, data, img, cindices, greyscale, rangelist,
+                  colorlist):
         """Set the renderings settings for one image"""
         (def_z, def_t) = self._read_default_planes(
             img, data, ignore_errors=args.ignore_errors)
@@ -689,22 +690,28 @@ class RenderControl(BaseControl):
         iids = []
 
         if args.batch > 1:
-            for img_batch in self.load_images(self.gateway, args.object, batch=args.batch):
+            for img_batch in self.load_images(self.gateway, args.object,
+                                              batch=args.batch):
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future_image = { executor.submit(self._set_rend, args, data,
-                                                     img, cindices, greyscale, rangelist,
-                                                     colorlist): img for img in img_batch}
-                    for future in concurrent.futures.as_completed(future_image):
+                    future_image = {executor.submit(self._set_rend, args,
+                                                    data, img, cindices,
+                                                    greyscale, rangelist,
+                                                    colorlist):
+                                    img for img in img_batch}
+                    for future in concurrent.futures.as_completed(
+                            future_image):
                         img = future_image[future]
                         try:
                             iid = future.result()
                             iids.append(iid)
                         except Exception as exc:
-                            print('%d generated an exception: %s' % (img.id, exc))
+                            print('%d generated an exception: %s' % (img.id,
+                                                                     exc))
 
         else:
             for img in self.load_images(self.gateway, args.object, batch=1):
-                iid = self._set_rend(args, data, img, cindices, greyscale, rangelist, colorlist)
+                iid = self._set_rend(args, data, img, cindices, greyscale,
+                                     rangelist, colorlist)
                 iids.append(iid)
 
         if not iids:
