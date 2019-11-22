@@ -398,7 +398,7 @@ class RenderControl(BaseControl):
                      "rendering settings")
 
         set_cmd.add_argument(
-            "--batch", type=int,
+            "--batch", type=int, default=1,
             help="Batch size to process simultaneously"
         )
 
@@ -636,11 +636,6 @@ class RenderControl(BaseControl):
     @gateway_required
     def set(self, args):
         """ Implements the 'set' command """
-        if args.batch:
-            batch = args.batch
-        else:
-            batch = 1
-
         newchannels = {}
         data = pydict_text_io.load(
             args.channels, session=self.client.getSession())
@@ -693,8 +688,8 @@ class RenderControl(BaseControl):
 
         iids = []
 
-        if batch > 1:
-            for img_batch in self.load_images(self.gateway, args.object, batch=batch):
+        if args.batch > 1:
+            for img_batch in self.load_images(self.gateway, args.object, batch=args.batch):
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future_image = { executor.submit(self._set_rend, args, data,
                                                      img, cindices, greyscale, rangelist,
