@@ -301,8 +301,9 @@ class RenderObject(object):
         self.defaultT = image._re.getDefaultT()
 
     def __str__(self):
-        sb = "rdefv1: model=%s, z=%s, t=%s\n" % (
-            self.model, self.defaultZ, self.defaultT)
+        """Return a string representation of the render object"""
+        sb = "rdefv%s: model=%s, z=%s, t=%s\n" % (
+            SPEC_VERSION, self.model, self.defaultZ, self.defaultT)
         sb += "tiles: %s\n" % (self.tiles,)
         for idx, ch in enumerate(self.channels):
             sb += "ch%s: %s\n" % (idx, ch)
@@ -488,7 +489,7 @@ class RenderControl(BaseControl):
         for img in self.render_images(self.gateway, args.object, batch=1):
             ro = RenderObject(img)
             if args.style == 'plain':
-                self.ctx.out(ro)
+                self.ctx.out(str(ro))
             elif args.style == 'yaml':
                 self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
                              width=80, indent=4,
