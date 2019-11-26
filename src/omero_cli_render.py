@@ -555,12 +555,8 @@ class RenderControl(BaseControl):
             self.ctx.dbg("Image:%s got thumbnail in %2.2fs" % (
                 img.id, stop - start))
 
-    def _read_default_planes(self, img, data, ignore_errors=False):
+    def _read_default_planes(self, img, def_z=None, def_t=None, ignore_errors=False):
         """Read and validate the default planes"""
-
-        # Read values from dictionary
-        def_z = data['z'] if 'z' in data else None
-        def_t = data['t'] if 't' in data else None
 
         # Minimal validation: default planes should be 1-indexed integers
         if (def_z is not None) and (def_z < 1 or int(def_z) != def_z):
@@ -589,14 +585,24 @@ class RenderControl(BaseControl):
                 def_t = None
         return (def_z, def_t)
 
-    def _set_rend(self, args, data, img, cindices, greyscale, rangelist,
-                  colorlist):
-        """Set the renderings settings for one image"""
-        (def_z, def_t) = self._read_default_planes(
-            img, data, ignore_errors=args.ignore_errors)
-
+    def _set_rend(self, def_z, def_t, img, cindices, greyscale, rangelist,
+                  colorlist, disable, skipthumbs):
+        """
+        Set the rendering settings for one image
+        :param def_z: The default z plane (int)
+        :param def_t: The default t plane (int)
+        :param img: The image (ImageWrapper)
+        :param cindices: The channel indices (int list)
+        :param greyscale: If the image is grey scale (boolean)
+        :param rangelist: The range (min, max) (list of int lists)
+        :param colorlist: The colors (list of hex strings)
+        :param disable: Flag if other channels should be disabled (boolean)
+        :param skipthumbs: Flag if the thumbnail generation should be skipped
+                           (boolean)
+        :return: The image id (long)
+        """
         reactivatechannels = []
-        if not args.disable:
+        if not disable:
             # Calling set_active_channels will disable channels which
             # are not specified, have to keep track of them and
             # re-activate them later again
@@ -626,7 +632,7 @@ class RenderControl(BaseControl):
             img.saveDefaults()
             self.ctx.dbg(
                 "Updated rendering settings for Image:%s" % img.id)
-            if not args.skipthumbs:
+            if not skipthumbs:
                 img.getThumbnail(size=(96,), direct=False, use_cached_ts=False)
         except Exception as e:
             self.ctx.err('ERROR: %s' % e)
@@ -638,19 +644,19 @@ class RenderControl(BaseControl):
     def set(self, args):
         """ Implements the 'set' command """
         newchannels = {}
-        data = pydict_text_io.load(
+        settings = pydict_text_io.load(
             args.channels, session=self.client.getSession())
-        if 'channels' not in data:
+        if 'channels' not in settings:
             self.ctx.die(104, "ERROR: No channels found in %s" % args.channels)
 
-        version = _getversion(data)
+        version = _getversion(settings)
         if version == 0:
             self.ctx.die(124, "ERROR: Cannot determine version. Specify"
                               " version or use either start/end or min/max"
                               " (not both).")
 
         # Read channel setttings from rendering dictionary
-        for chindex, chdict in data['channels'].items():
+        for chindex, chdict in settings['channels'].items():
             try:
                 cindex = int(chindex)
             except Exception as e:
@@ -668,10 +674,14 @@ class RenderControl(BaseControl):
                     105, "Invalid channel description: %s" % chdict)
 
         try:
-            greyscale = data['greyscale']
-            print('greyscale=%s' % data['greyscale'])
+            greyscale = settings['greyscale']
+            print('greyscale=%s' % settings['greyscale'])
         except KeyError:
             greyscale = None
+
+        # Read values from dictionary
+        def_z = settings['z'] if 'z' in settings else None
+        def_t = settings['t'] if 't' in settings else None
 
         namedict = {}
         cindices = []
@@ -688,35 +698,26 @@ class RenderControl(BaseControl):
             colorlist.append(c.color)
 
         iids = []
+        n_images = 0
+        for img_batch in self.load_images(self.gateway, args.object,
+                                          batch=args.batch):
+            n_images += len(img_batch)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future_image = {executor.submit(self._set_rend, def_z,
+                                                def_t, img, cindices, greyscale,
+                                                rangelist, colorlist,
+                                                args.disable, args.skipthumbs):
+                                img for img in img_batch}
+                for future in concurrent.futures.as_completed(future_image):
+                    img = future_image[future]
+                    try:
+                        iid = future.result()
+                        iids.append(iid)
+                    except Exception as exc:
+                        self.ctx.err('ERROR: Image %d: %s' % (img.id, exc))
 
-        if args.batch > 1:
-            for img_batch in self.load_images(self.gateway, args.object,
-                                              batch=args.batch):
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future_image = {executor.submit(self._set_rend, args,
-                                                    data, img, cindices,
-                                                    greyscale, rangelist,
-                                                    colorlist):
-                                    img for img in img_batch}
-                    for future in concurrent.futures.as_completed(
-                            future_image):
-                        img = future_image[future]
-                        try:
-                            iid = future.result()
-                            iids.append(iid)
-                        except Exception as exc:
-                            print('%d generated an exception: %s' % (img.id,
-                                                                     exc))
-
-        else:
-            for img in self.load_images(self.gateway, args.object, batch=1):
-                iid = self._set_rend(args, data, img, cindices, greyscale,
-                                     rangelist, colorlist)
-                iids.append(iid)
-
-        if not iids:
-            self.ctx.die(113, "ERROR: No images found for %s %d" %
-                         (args.object.__class__.__name__, args.object.id._val))
+        if len(iids) < n_images:
+            self.ctx.die(113, "Some errors occurred.")
 
         if namedict:
             self._update_channel_names(self.gateway, iids, namedict)
