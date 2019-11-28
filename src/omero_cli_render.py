@@ -584,10 +584,9 @@ class RenderControl(BaseControl):
                 def_t = None
         return (def_z, def_t)
 
-    def _load_rendering_settings(self, source):
+    def _load_rendering_settings(self, source, session=None):
         """Load a rendering dictionary from a source (file or object)"""
-        data = pydict_text_io.load(
-            source, session=self.client.getSession())
+        data = pydict_text_io.load(source, session=session)
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % source)
 
@@ -638,7 +637,8 @@ class RenderControl(BaseControl):
     @gateway_required
     def set(self, args):
         """ Implements the 'set' command """
-        data = self._load_rendering_settings(args.channels)
+        data = self._load_rendering_settings(
+            args.channels, session=self.client.getSession())
 
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
