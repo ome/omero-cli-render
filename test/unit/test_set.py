@@ -63,3 +63,23 @@ class TestLoadRenderingSettings:
         with pytest.raises(NonZeroReturnCode) as e:
             self.render._load_rendering_settings(f)
         assert e.value.rv == 124
+
+
+class TestReadChannels:
+    def setup_method(self):
+        self.cli = CLI()
+        self.cli.register("render", RenderControl, "TEST")
+        self.render = self.cli.controls['render']
+
+    def test_non_integer_channel(self):
+        d = {'channels': {'GFP': {'label': 'foo'}}}
+        with pytest.raises(NonZeroReturnCode) as e:
+            self.render._read_channels(d)
+        assert e.value.rv == 105
+
+    @pytest.mark.parametrize('key', ['min', 'max', 'start', 'end'])
+    def test_float_keys(self, key):
+        d = {'channels': {1: {key: 'foo'}}}
+        with pytest.raises(NonZeroReturnCode) as e:
+            self.render._read_channels(d)
+        assert e.value.rv == 105
