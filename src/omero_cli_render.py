@@ -618,7 +618,7 @@ class RenderControl(BaseControl):
             try:
                 cobj = ChannelObject(chdict, version)
                 newchannels[cindex] = cobj
-                print('%d:%s' % (cindex, cobj))
+                self.ctx.dbg('%d:%s' % (cindex, cobj))
             except Exception as e:
                 self.ctx.err('ERROR: %s' % e)
                 self.ctx.die(
@@ -651,6 +651,8 @@ class RenderControl(BaseControl):
 
             # Extract settings from dictionary
             greyscale = data.get('greyscale', None)
+            if greyscale is not None:
+                self.ctx.dbg('greyscale=%s' % data['greyscale'])
             (namedict, cindices, rangelist, colourlist) = self._read_channels(
                 data)
             (def_z, def_t) = self._read_default_planes(
