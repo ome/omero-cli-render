@@ -669,8 +669,9 @@ class RenderControl(BaseControl):
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
 
-            if data.get('greyscale', None) is not None:
-                self.ctx.dbg('greyscale=%s' % data['greyscale'])
+            greyscale = data.get('greyscale', None)
+            if greyscale is not None:
+                self.ctx.dbg('greyscale=%s' % greyscale)
                 if greyscale:
                     img.setGreyscaleRenderingModel()
                 else:
