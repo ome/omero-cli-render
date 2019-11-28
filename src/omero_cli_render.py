@@ -586,7 +586,12 @@ class RenderControl(BaseControl):
 
     def _load_rendering_settings(self, source, session=None):
         """Load a rendering dictionary from a source (file or object)"""
-        data = pydict_text_io.load(source, session=session)
+        try:
+            data = pydict_text_io.load(source, session=session)
+        except Exception as e:
+            self.ctx.dbg(e)
+            self.ctx.die(104, "Could not read %s" % source)
+
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % source)
 

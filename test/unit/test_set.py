@@ -20,10 +20,11 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from omero.cli import CLI
+from omero.cli import CLI, NonZeroReturnCode
 from omero_cli_render import RenderControl
 
 import pytest
+import uuid
 
 
 class TestLoadRenderingSettings:
@@ -33,5 +34,9 @@ class TestLoadRenderingSettings:
         self.render = self.cli.controls['render']
 
     def test_none(self):
-        with pytest.raises(Exception):
+        with pytest.raises(NonZeroReturnCode):
             self.render._load_rendering_settings(None)
+
+    def test_non_existing_file(self, tmpdir):
+        with pytest.raises(NonZeroReturnCode):
+            self.render._load_rendering_settings(str(uuid.uuid4()) + '.yml')
