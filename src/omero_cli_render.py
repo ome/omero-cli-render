@@ -650,9 +650,6 @@ class RenderControl(BaseControl):
             iids.append(img.id)
 
             # Extract settings from dictionary
-            greyscale = data.get('greyscale', None)
-            if greyscale is not None:
-                self.ctx.dbg('greyscale=%s' % data['greyscale'])
             (namedict, cindices, rangelist, colourlist) = self._read_channels(
                 data)
             (def_z, def_t) = self._read_default_planes(
@@ -671,7 +668,9 @@ class RenderControl(BaseControl):
 
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
-            if greyscale is not None:
+
+            if data.get('greyscale', None) is not None:
+                self.ctx.dbg('greyscale=%s' % data['greyscale'])
                 if greyscale:
                     img.setGreyscaleRenderingModel()
                 else:
