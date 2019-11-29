@@ -584,21 +584,28 @@ class RenderControl(BaseControl):
                 def_t = None
         return (def_z, def_t)
 
-    @gateway_required
-    def set(self, args):
-        """ Implements the 'set' command """
-        newchannels = {}
-        data = pydict_text_io.load(
-            args.channels, session=self.client.getSession())
+    def _load_rendering_settings(self, source, session=None):
+        """Load a rendering dictionary from a source (file or object)"""
+        try:
+            data = pydict_text_io.load(source, session=session)
+        except Exception as e:
+            self.ctx.dbg(e)
+            self.ctx.die(103, "Could not read %s" % source)
+
         if 'channels' not in data:
-            self.ctx.die(104, "ERROR: No channels found in %s" % args.channels)
+            self.ctx.die(104, "ERROR: No channels found in %s" % source)
 
         version = _getversion(data)
         if version == 0:
             self.ctx.die(124, "ERROR: Cannot determine version. Specify"
                               " version or use either start/end or min/max"
                               " (not both).")
+        return data
 
+    def _read_channels(self, data):
+        """Read new channels from settings dictionary"""
+        newchannels = {}
+        version = _getversion(data)
         # Read channel setttings from rendering dictionary
         for chindex, chdict in data['channels'].items():
             try:
@@ -611,17 +618,11 @@ class RenderControl(BaseControl):
             try:
                 cobj = ChannelObject(chdict, version)
                 newchannels[cindex] = cobj
-                print('%d:%s' % (cindex, cobj))
+                self.ctx.dbg('%d:%s' % (cindex, cobj))
             except Exception as e:
                 self.ctx.err('ERROR: %s' % e)
                 self.ctx.die(
                     105, "Invalid channel description: %s" % chdict)
-
-        try:
-            greyscale = data['greyscale']
-            print('greyscale=%s' % data['greyscale'])
-        except KeyError:
-            greyscale = None
 
         namedict = {}
         cindices = []
@@ -636,6 +637,18 @@ class RenderControl(BaseControl):
                 cindices.append(i)
             rangelist.append([c.start, c.end])
             colourlist.append(c.color)
+        return (namedict, cindices, rangelist, colourlist)
+
+    @gateway_required
+    def set(self, args):
+        """ Implements the 'set' command """
+        data = self._load_rendering_settings(
+            args.channels, session=self.client.getSession())
+        (namedict, cindices, rangelist, colourlist) = self._read_channels(
+            data)
+        greyscale = data.get('greyscale', None)
+        if greyscale is not None:
+            self.ctx.dbg('greyscale=%s' % greyscale)
 
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
@@ -657,6 +670,7 @@ class RenderControl(BaseControl):
 
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
+
             if greyscale is not None:
                 if greyscale:
                     img.setGreyscaleRenderingModel()
