@@ -644,14 +644,16 @@ class RenderControl(BaseControl):
         """ Implements the 'set' command """
         data = self._load_rendering_settings(
             args.channels, session=self.client.getSession())
+        (namedict, cindices, rangelist, colourlist) = self._read_channels(
+            data)
+        greyscale = data.get('greyscale', None)
+        if greyscale is not None:
+            self.ctx.dbg('greyscale=%s' % greyscale)
 
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
 
-            # Extract settings from dictionary
-            (namedict, cindices, rangelist, colourlist) = self._read_channels(
-                data)
             (def_z, def_t) = self._read_default_planes(
                 img, data, ignore_errors=args.ignore_errors)
 
@@ -669,9 +671,7 @@ class RenderControl(BaseControl):
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
 
-            greyscale = data.get('greyscale', None)
             if greyscale is not None:
-                self.ctx.dbg('greyscale=%s' % greyscale)
                 if greyscale:
                     img.setGreyscaleRenderingModel()
                 else:
