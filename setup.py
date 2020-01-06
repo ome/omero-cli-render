@@ -110,7 +110,7 @@ setup(
           'or later (GPLv2+)',
           'Natural Language :: English',
           'Operating System :: OS Independent',
-          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3',
           'Topic :: Software Development :: Libraries :: Python Modules',
       ],  # Get strings from
           # http://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -119,9 +119,10 @@ setup(
     license='GPL-2.0+',
     install_requires=[
         'PyYAML',
-        'omero-py>=5.6.dev4',
+        'omero-py>=5.6.dev9',
         'future'
         ],
+    python_requires='>=3',
     url='%s' % url,
     zip_safe=False,
     download_url='%s/v%s.tar.gz' % (url, version),
