@@ -12,8 +12,8 @@ Plugin for use in the OMERO CLI.
 Requirements
 ============
 
-* OMERO 5.4.0 or newer
-* Python 2.7
+* OMERO 5.6.0 or newer
+* Python 3.6
 
 
 Installing from PyPI
@@ -36,4 +36,4 @@ licensed under the terms of the GNU General Public License (GPL) v2 or later.
 Copyright
 ---------
 
-2017-2019, The Open Microscopy Environment
+2017-2020, The Open Microscopy Environment
