@@ -13,7 +13,7 @@ Requirements
 ============
 
 * OMERO 5.6.0 or newer
-* Python 3.6
+* Python 3.6 or newer
 
 
 Installing from PyPI
