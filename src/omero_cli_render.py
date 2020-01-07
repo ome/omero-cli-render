@@ -53,7 +53,7 @@ INFO_HELP = """Show details of a rendering setting
     Image is assumed if <object>: is omitted
 
     Examples:
-    bin/omero render info Image:123
+    omero render info Image:123
 """
 
 COPY_HELP = """Copy rendering setting to multiple objects
@@ -66,9 +66,9 @@ COPY_HELP = """Copy rendering setting to multiple objects
     the following arguments are the targets.
 
     Examples:
-    bin/omero render copy Image:456 Image:222 Image:333
-    bin/omero render copy Image:456 Plate:1
-    bin/omero render copy Image:456 Dataset:1
+    omero render copy Image:456 Image:222 Image:333
+    omero render copy Image:456 Plate:1
+    omero render copy Image:456 Dataset:1
 """
 
 EDIT_HELP = "Deprecated, please use 'set' instead"
@@ -80,8 +80,8 @@ SET_HELP = """Set rendering settings
     Image is assumed if <object>: is omitted
 
     Examples:
-    bin/omero render set Image:1 settings.json
-    bin/omero render set Dataset:1 settings.yml
+    omero render set Image:1 settings.json
+    omero render set Dataset:1 settings.yml
 
     # where the input file (YAML or JSON) contains a top-level channels
     # key (required), and an optional top-level greyscale key (True: greyscale,
@@ -135,7 +135,7 @@ TEST_HELP = """Test that underlying pixel data is available
     Where status is either ok, miss, fill, cancel, or fail.
 
     Examples:
-    bin/omero render test Image:1
+    omero render test Image:1
 """
 
 # Current version for specifying rendering settings
