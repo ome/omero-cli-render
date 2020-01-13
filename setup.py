@@ -119,7 +119,7 @@ setup(
     license='GPL-2.0+',
     install_requires=[
         'PyYAML',
-        'omero-py>=5.6.dev9',
+        'omero-py>=5.6.0',
         'future'
         ],
     python_requires='>=3',
