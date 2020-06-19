@@ -87,13 +87,13 @@ SET_HELP = """Set rendering settings
     # key (required), and an optional top-level greyscale key (True: greyscale,
     # False: color). Channel elements are index:dictionaries of the form:
 
-    channels:                       Required
-      <int>:                        Channel index, 1-based
-        active: <bool>              Active channel
-        color: <string>             Channel color as HTML RGB triplet
-        label: <string>             Channel name
-        start: <float>              Start of the rendering window, optional
-        end: <float>                End of the rendering window, optional
+    channels:               Required
+      <int>:                Channel index, 1-based
+        active: <bool>      Active channel
+        color: <string>     Channel color as HTML RGB triplet
+        label: <string>     Channel name
+        start: <float>      Start of rendering window, optional (needs end)
+        end: <float>        End of rendering window, optional (needs start)
       <int>:
         ...
     greyscale: <bool>               Greyscale rendering, optional
