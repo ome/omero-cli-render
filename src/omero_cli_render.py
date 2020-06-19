@@ -116,6 +116,7 @@ SET_HELP = """Set rendering settings
     t: 1
 
     # Omitted fields will keep their current values.
+    # Omitted channels will not be disabled unless --disable is used.
     # If the file specifies to turn off a channel (active: False) then the
     # other settings like min, max, and color which might be specified for
     # that channel in the same file will be ignored, however the channel
