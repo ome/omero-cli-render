@@ -7,7 +7,8 @@
 omero-cli-render
 ================
 
-Plugin for use in the OMERO CLI.
+OMERO CLI plugin for bulk application of rendering settings.
+Settings can be applied from yaml files or copied from other Images in OMERO.
 
 Requirements
 ------------
@@ -26,6 +27,14 @@ Install the command-line tool using `pip <https://pip.pypa.io/en/stable/>`_:
 ::
 
     $ pip install -U omero-cli-render
+
+
+Usage
+-----
+
+Call via the OMERO command line. Use ``-h`` to show available sub-commands::
+
+    $ omero render -h
 
 Release process
 ---------------
