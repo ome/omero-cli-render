@@ -87,13 +87,13 @@ SET_HELP = """Set rendering settings
     # key (required), and an optional top-level greyscale key (True: greyscale,
     # False: color). Channel elements are index:dictionaries of the form:
 
-    channels:                       Required
-      <int>:                        Channel index, 1-based
-        active: <bool>              Active channel
-        color: <string>             Channel color as HTML RGB triplet
-        label: <string>             Channel name
-        start: <float>              Start of the rendering window, optional
-        end: <float>                End of the rendering window, optional
+    channels:               Required
+      <int>:                Channel index, 1-based
+        active: <bool>      Active channel
+        color: <string>     Channel color as HTML RGB triplet
+        label: <string>     Channel name
+        start: <float>      Start of rendering window, optional (needs end)
+        end: <float>        End of rendering window, optional (needs start)
       <int>:
         ...
     greyscale: <bool>               Greyscale rendering, optional
@@ -116,6 +116,7 @@ SET_HELP = """Set rendering settings
     t: 1
 
     # Omitted fields will keep their current values.
+    # Omitted channels will not be disabled unless --disable is used.
     # If the file specifies to turn off a channel (active: False) then the
     # other settings like min, max, and color which might be specified for
     # that channel in the same file will be ignored, however the channel
