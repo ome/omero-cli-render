@@ -664,7 +664,8 @@ class RenderControl(BaseControl):
                 # Need to reset ALL active channels after set_active_channels()
                 imgchannels = img.getChannels()
                 for ci, ch in enumerate(imgchannels, 1):
-                    if -ci not in cindices and ch.isActive():
+                    if (-ci not in cindices and ch.isActive()) \
+                            or ci in cindices:
                         active_channels.append(ci)
 
             img.set_active_channels(
