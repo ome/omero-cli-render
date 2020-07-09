@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+0.5.1
+-----
+
+*   Fix channel re-activation when render set is passed without `--disable` [#40](https://github.com/ome/omero-cli-render/pull/40)
+*   Fix REAMDE and usage [#41](https://github.com/ome/omero-cli-render/pull/41)
+
+0.5.0
+-----
+
+*   Upgrade to Python 3 and consume new omero-py project [#31](https://github.com/ome/omero-cli-render/pull/31) [#32](https://github.com/ome/omero-cli-render/pull/32) [#37](https://github.com/ome/omero-cli-render/pull/37) [#38](https://github.com/ome/omero-cli-render/pull/38)
+*   Refactor rendering settings parsing [#34](https://github.com/ome/omero-cli-render/pull/34)
 
 0.4.3
 -----
