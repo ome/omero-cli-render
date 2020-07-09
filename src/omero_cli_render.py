@@ -139,6 +139,16 @@ TEST_HELP = """Test that underlying pixel data is available
     omero render test Image:1
 """
 
+TEST_RENAME = """Rename a channel
+    The syntax for specifying objects is: <object>:<id>
+    <object> can be Image, Project, Dataset, Plate or Screen.
+    Image is assumed if <object>: is omitted
+
+    Examples:
+    omero render rename 0 'First Channel' Image:1
+"""
+
+
 # Current version for specifying rendering settings
 # in the yaml / json files
 SPEC_VERSION = 2
@@ -360,6 +370,10 @@ class RenderControl(BaseControl):
         set_cmd = parser.add(sub, self.set, SET_HELP)
         edit = parser.add(sub, self.edit, EDIT_HELP)
         test = parser.add(sub, self.test, TEST_HELP)
+        rename = parser.add(sub, self.rename, TEST_RENAME)
+
+        rename.add_argument("channel_index", type=int, help="Channel index")
+        rename.add_argument("channel_name", type=str, help="New channel name")
 
         render_type = ProxyStringType("Image")
         src_help = ("Rendering settings source")
@@ -368,7 +382,7 @@ class RenderControl(BaseControl):
             x.add_argument("object", type=render_type, help=src_help)
 
         tgt_help = ("Objects to apply the rendering settings to")
-        for x in (set_cmd, edit):
+        for x in (set_cmd, edit, rename):
             x.add_argument("object", type=render_type, help=tgt_help,
                            nargs="+")
 
@@ -761,6 +775,14 @@ class RenderControl(BaseControl):
         stop = time.time()
         self.ctx.out("%s %s %s %s" % (msg, pixid, stop-start, error))
         return msg
+
+    @gateway_required
+    def rename(self, args):
+        for img in self.render_images(self.gateway, args.object, batch=1):
+            channels = img.getChannels()
+            lc = channels[args.channel_index].getLogicalChannel()
+            lc.setName(args.channel_name)
+            lc.save()
 
 
 try:
