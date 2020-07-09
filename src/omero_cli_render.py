@@ -146,7 +146,7 @@ TEST_RENAME = """Rename channels
 
     Examples:
     omero render rename Image:1 channel_names.json
-    omero render rename Dataset:1 '{1: "First Channel", 2: "Second Channel"}'
+    omero render rename Dataset:1 '{"1":"First Channel", "2":"Second Channel"}'
 """
 
 
