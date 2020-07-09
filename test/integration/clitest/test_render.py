@@ -349,3 +349,32 @@ class TestRender(CLITest):
         self.args += ["--ignore-errors"]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
+
+    def test_disable_flag(self, tmpdir):
+        self.create_image()
+        # Set all channels active...
+        gw = BlitzGateway(client_obj=self.client)
+        image = gw.getObject('Image', self.idonly)
+        image.setActiveChannels([1, 2, 3, 4])
+        image.saveDefaults()
+        # Update first channel
+        rd = {'channels': {
+            1: {'active': True,
+                'start': 0,
+                'end': 255},
+        }}
+        rdfile = tmpdir.join('render-test.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        # re-load image - check all channels still active
+        image = gw.getObject('Image', self.idonly)
+        for ch in image.getChannels():
+            assert ch.isActive()
+        # Re-run with --disable flag
+        self.args += ["--disable"]
+        self.cli.invoke(self.args, strict=True)
+        # re-load image - check ONLY first channel is active
+        image = gw.getObject('Image', self.idonly)
+        for idx, ch in enumerate(image.getChannels()):
+            assert ch.isActive() == (idx == 0)

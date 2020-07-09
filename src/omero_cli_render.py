@@ -658,16 +658,16 @@ class RenderControl(BaseControl):
             (def_z, def_t) = self._read_default_planes(
                 img, data, ignore_errors=args.ignore_errors)
 
-            reactivatechannels = []
+            active_channels = []
             if not args.disable:
                 # Calling set_active_channels will disable channels which
-                # are not specified, have to keep track of them and
-                # re-activate them later again
+                # are not specified.
+                # Need to reset ALL active channels after set_active_channels()
                 imgchannels = img.getChannels()
                 for ci, ch in enumerate(imgchannels, 1):
-                    if ci not in cindices and -ci not in cindices\
-                            and ch.isActive():
-                        reactivatechannels.append(ci)
+                    if (-ci not in cindices and ch.isActive()) \
+                            or ci in cindices:
+                        active_channels.append(ci)
 
             img.set_active_channels(
                 cindices, windows=rangelist, colors=colourlist)
@@ -678,8 +678,9 @@ class RenderControl(BaseControl):
                 else:
                     img.setColorRenderingModel()
 
-            if len(reactivatechannels) > 0:
-                img.set_active_channels(reactivatechannels)
+            # Re-activate any un-listed channels
+            if len(active_channels) > 0:
+                img.set_active_channels(active_channels)
 
             if def_z:
                 img.setDefaultZ(def_z - 1)
