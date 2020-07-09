@@ -139,13 +139,14 @@ TEST_HELP = """Test that underlying pixel data is available
     omero render test Image:1
 """
 
-TEST_RENAME = """Rename a channel
+TEST_RENAME = """Rename channels
     The syntax for specifying objects is: <object>:<id>
     <object> can be Image, Project, Dataset, Plate or Screen.
     Image is assumed if <object>: is omitted
 
     Examples:
-    omero render rename 0 'First Channel' Image:1
+    omero render rename Image:1 channel_names.json
+    omero render rename Dataset:1 '{1: "First Channel", 2: "Second Channel"}'
 """
 
 
@@ -372,9 +373,6 @@ class RenderControl(BaseControl):
         test = parser.add(sub, self.test, TEST_HELP)
         rename = parser.add(sub, self.rename, TEST_RENAME)
 
-        rename.add_argument("channel_index", type=int, help="Channel index")
-        rename.add_argument("channel_name", type=str, help="New channel name")
-
         render_type = ProxyStringType("Image")
         src_help = ("Rendering settings source")
 
@@ -421,6 +419,10 @@ class RenderControl(BaseControl):
             "--thumb", action="store_true",
             help="If underlying pixel data available test thumbnail retrieval"
         )
+
+        rename.add_argument("channel_names", type=str,
+                            help="File or String which specifies the new "
+                                 "channel names (1-based)")
 
     def _lookup(self, gateway, type, oid):
         # TODO: move _lookup to a _configure type
@@ -547,15 +549,15 @@ class RenderControl(BaseControl):
                     self._generate_thumbs(list(batch.values()))
 
     def update_channel_names(self, gateway, obj, namedict):
+        count = 0
         for targets in self.render_images(gateway, obj):
             iids = [img.id for img in targets]
-            self._update_channel_names(self, iids, namedict)
+            count += self._update_channel_names(gateway, iids, namedict)
+        self.ctx.dbg("Updated channel names for {} images.".format(count))
 
     def _update_channel_names(self, gateway, iids, namedict):
             counts = gateway.setChannelNames("Image", iids, namedict)
-            if counts:
-                self.ctx.dbg("Updated channel names for %d/%d images" % (
-                    counts['updateCount'], counts['imageCount']))
+            return counts['updateCount']
 
     def _generate_thumbs(self, images):
         for img in images:
@@ -778,11 +780,15 @@ class RenderControl(BaseControl):
 
     @gateway_required
     def rename(self, args):
-        for img in self.render_images(self.gateway, args.object, batch=1):
-            channels = img.getChannels()
-            lc = channels[args.channel_index].getLogicalChannel()
-            lc.setName(args.channel_name)
-            lc.save()
+        try:
+            tmp = pydict_text_io.load(args.channel_names, session=None)
+            names_dict = {}
+            for k, v in tmp.items():
+                names_dict[int(k)] = v
+        except Exception as e:
+            self.ctx.dbg(e)
+            self.ctx.die(143, "Could not read %s" % args.channel_names)
+        self.update_channel_names(self.gateway, args.object, names_dict)
 
 
 try:
