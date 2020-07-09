@@ -349,3 +349,21 @@ class TestRender(CLITest):
         self.args += ["--ignore-errors"]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
+
+    def test_rename(self, tmpdir):
+        self.create_image(sizec=3)
+        gw = BlitzGateway(client_obj=self.client)
+        image = gw.getObject('Image', self.idonly)
+        ch3_name = image.getChannels()[2].getName()
+
+        ch = {"1": "First", "2": "Second"}
+        chfile = tmpdir.join('channel_names.json')
+        chfile.write(json.dumps(ch))
+        self.args += ["rename", self.idonly, str(chfile)]
+        self.cli.invoke(self.args, strict=True)
+
+        image = gw.getObject('Image', self.idonly)
+        channels = image.getChannels()
+        assert channels[0].getName() == "First"
+        assert channels[0].getName() == "Second"
+        assert channels[0].getName() == ch3_name
