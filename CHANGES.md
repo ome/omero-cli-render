@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+0.6.0
+-----
+
+*   Also set rendering setting (colors, windows) for disabled channels [#43](https://github.com/ome/omero-cli-render/pull/43)
+
+
 0.5.1
 -----
 
