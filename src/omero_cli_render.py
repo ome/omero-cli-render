@@ -670,7 +670,8 @@ class RenderControl(BaseControl):
                         active_channels.append(ci)
 
             img.set_active_channels(
-                cindices, windows=rangelist, colors=colourlist)
+                cindices, windows=rangelist, colors=colourlist,
+                set_inactive=True)
 
             if greyscale is not None:
                 if greyscale:

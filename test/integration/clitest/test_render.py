@@ -378,3 +378,16 @@ class TestRender(CLITest):
         image = gw.getObject('Image', self.idonly)
         for idx, ch in enumerate(image.getChannels()):
             assert ch.isActive() == (idx == 0)
+
+    def test_set_inactive(self, tmpdir):
+        """Test rendering settings  """
+        self.create_image()
+        rd = self.get_render_def()
+        rd['channels'][1]['active'] = False
+        rd['channels'][4]['active'] = False
+        rdfile = tmpdir.join('render-test-setinactive.json')
+        rdfile.write(json.dumps(rd))
+
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
