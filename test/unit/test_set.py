@@ -57,12 +57,11 @@ class TestLoadRenderingSettings:
             self.render._load_rendering_settings(f)
         assert e.value.rv == 104
 
-    def test_bad_version(self, tmpdir):
+    def test_missing_version_pass(self, tmpdir):
         d = {'channels': {1: {'label': 'foo'}}}
         f = write_yaml(d, tmpdir)
-        with pytest.raises(NonZeroReturnCode) as e:
-            self.render._load_rendering_settings(f)
-        assert e.value.rv == 124
+        data = self.render._load_rendering_settings(f)
+        assert data == d
 
 
 class TestReadChannels:
