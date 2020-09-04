@@ -173,7 +173,7 @@ def _getversion(dictionary):
                 return 1
     else:
         return dictionary['version']
-    return 0
+    return SPEC_VERSION
 
 
 class ChannelObject(object):
