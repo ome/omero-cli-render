@@ -172,7 +172,10 @@ def _getversion(dictionary):
             if 'min' in chdict or 'max' in chdict:
                 return 1
     else:
-        return dictionary['version']
+        v = dictionary['version']
+        if not isinstance(v, int) or v < 1 or v > SPEC_VERSION:
+            return 0
+        return v
     return SPEC_VERSION
 
 
