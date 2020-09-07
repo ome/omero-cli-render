@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+0.6.1
+-----
+
+*   Improve version detection logic [#44](https://github.com/ome/omero-cli-render/pull/44)
+
 0.6.0
 -----
 
