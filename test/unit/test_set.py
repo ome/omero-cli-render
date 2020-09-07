@@ -21,7 +21,7 @@
 
 
 from omero.cli import CLI, NonZeroReturnCode
-from omero_cli_render import RenderControl
+from omero_cli_render import RenderControl, SPEC_VERSION, _getversion
 
 import pytest
 import uuid
@@ -57,8 +57,48 @@ class TestLoadRenderingSettings:
             self.render._load_rendering_settings(f)
         assert e.value.rv == 104
 
-    def test_bad_version(self, tmpdir):
+    def test_missing_version_pass(self, tmpdir):
         d = {'channels': {1: {'label': 'foo'}}}
+        f = write_yaml(d, tmpdir)
+        data = self.render._load_rendering_settings(f)
+        assert data == d
+        assert _getversion(d) == SPEC_VERSION
+
+    @pytest.mark.parametrize('key1', ['start', 'end'])
+    @pytest.mark.parametrize('key2', ['min', 'max'])
+    def test_missing_version_fail(self, tmpdir, key1, key2):
+        d = {'channels': {1: {key1: 100, key2: 200}}}
+        f = write_yaml(d, tmpdir)
+        with pytest.raises(NonZeroReturnCode) as e:
+            self.render._load_rendering_settings(f)
+        assert e.value.rv == 124
+
+    @pytest.mark.parametrize('key', ['start', 'end'])
+    def test_version_2(self, tmpdir, key):
+        d = {'channels': {1: {key: 100, 'label': 'foo'}}}
+        f = write_yaml(d, tmpdir)
+        data = self.render._load_rendering_settings(f)
+        assert data == d
+        assert _getversion(d) == 2
+
+    @pytest.mark.parametrize('key', ['min', 'max'])
+    def test_version_1(self, tmpdir, key):
+        d = {'channels': {1: {key: 100, 'label': 'foo'}}}
+        f = write_yaml(d, tmpdir)
+        data = self.render._load_rendering_settings(f)
+        assert data == d
+        assert _getversion(d) == 1
+
+    @pytest.mark.parametrize('version', [1, 2])
+    def test_version_detection(self, tmpdir, version):
+        d = {'version': version, 'channels': {1: {'label': 'foo'}}}
+        f = write_yaml(d, tmpdir)
+        data = self.render._load_rendering_settings(f)
+        assert data == d
+        assert _getversion(d) == version
+
+    def test_version_fail(self, tmpdir):
+        d = {'version': 0, 'channels': {1: {'label': 'foo'}}}
         f = write_yaml(d, tmpdir)
         with pytest.raises(NonZeroReturnCode) as e:
             self.render._load_rendering_settings(f)
