@@ -118,9 +118,7 @@ setup(
     author_email='ome-devel@lists.openmicroscopy.org.uk',
     license='GPL-2.0+',
     install_requires=[
-        'PyYAML',
-        'omero-py>=5.6.0',
-        'future'
+        'omero-py>=5.8.0',
         ],
     python_requires='>=3',
     url='%s' % url,
