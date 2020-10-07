@@ -491,21 +491,27 @@ class RenderControl(BaseControl):
         """ Implements the 'info' command """
         first = True
         for img in self.render_images(self.gateway, args.object, batch=1):
-            ro = RenderObject(img)
-            if args.style == 'plain':
-                self.ctx.out(str(ro))
-            elif args.style == 'yaml':
-                self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
-                             width=80, indent=4,
-                             default_flow_style=False).rstrip())
-            else:
-                if not first:
-                    self.ctx.die(
-                        103,
-                        "Output styles not supported for multiple images")
-                self.ctx.out(json.dumps(
-                    ro.to_dict(), sort_keys=True, indent=4))
-                first = False
+            try:
+                ro = RenderObject(img)
+                if args.style == 'plain':
+                    self.ctx.out(str(ro))
+                elif args.style == 'yaml':
+                    self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
+                                           width=80, indent=4,
+                                           default_flow_style=False).rstrip())
+                else:
+                    if not first:
+                        self.ctx.die(
+                            103,
+                            "Output styles not supported for multiple images")
+                    self.ctx.out(json.dumps(
+                        ro.to_dict(), sort_keys=True, indent=4))
+                    first = False
+            except Exception as e:
+                self.ctx.err('ERROR: %s' % e)
+            finally:
+                img._closeRE()
+
 
     @gateway_required
     def copy(self, args):
