@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+0.6.2
+-----
+
+*   Ensure rendering service is closed for info subcommand [#47](https://github.com/ome/omero-cli-render/pull/47)
+
 0.6.1
 -----
 
