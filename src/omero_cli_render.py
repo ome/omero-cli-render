@@ -271,8 +271,20 @@ class RenderObjectNoEngine(object):
     def __init__(self, image):
         assert image
         image.loadRenderOptions()
-        rdef = image._conn.getRenderingSettingsService() \
-            .getRenderingSettings(image.getPrimaryPixels().getId())
+        rs = image._conn.getRenderingSettingsService()
+        try:
+            rdef = rs.getRenderingSettings(image.getPrimaryPixels().getId())
+        except Exception:
+            # Trigger rendering settings creation
+            try:
+                if not image._prepareRenderingEngine():
+                    raise Exception(
+                        "Failed to prepare Rendering Engine for %s" % image)
+                rdef = image._conn.getRenderingSettingsService() \
+                    .getRenderingSettings(image.getPrimaryPixels().getId())
+            finally:
+                image._closeRE()
+
         self.image = image
         self.name = image.name or ''
         self.type = image.getPixelsType()
@@ -288,10 +300,11 @@ class RenderObjectNoEngine(object):
             cb = rdef.getChannelBinding(i)
             ch.start = cb.getInputStart()._val
             ch.end = cb.getInputEnd()._val
-            ch.color = ColorHolder.fromRGBA(cb.getRed()._val, cb.getGreen()._val,
-                                            cb.getBlue()._val, cb.getAlpha()._val)
+            ch.color = ColorHolder.fromRGBA(cb.getRed()._val,
+                                            cb.getGreen()._val,
+                                            cb.getBlue()._val,
+                                            cb.getAlpha()._val)
             ch.active = cb.getActive()._val
-
 
     def __str__(self):
         """Return a string representation of the render object"""
@@ -542,26 +555,21 @@ class RenderControl(BaseControl):
         """ Implements the 'info' command """
         first = True
         for img in self.render_images(self.gateway, args.object, batch=1):
-            try:
-                ro = RenderObjectNoEngine(img)
-                if args.style == 'plain':
-                    self.ctx.out(str(ro))
-                elif args.style == 'yaml':
-                    self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
-                                           width=80, indent=4,
-                                           default_flow_style=False).rstrip())
-                else:
-                    if not first:
-                        self.ctx.die(
-                            103,
-                            "Output styles not supported for multiple images")
-                    self.ctx.out(json.dumps(
-                        ro.to_dict(), sort_keys=True, indent=4))
-                    first = False
-            except Exception as e:
-                self.ctx.err('ERROR: %s' % e)
-            finally:
-                img._closeRE()
+            ro = RenderObjectNoEngine(img)
+            if args.style == 'plain':
+                self.ctx.out(str(ro))
+            elif args.style == 'yaml':
+                self.ctx.out(yaml.dump(ro.to_dict(), explicit_start=True,
+                                       width=80, indent=4,
+                                       default_flow_style=False).rstrip())
+            else:
+                if not first:
+                    self.ctx.die(
+                        103,
+                        "Output styles not supported for multiple images")
+                self.ctx.out(json.dumps(
+                    ro.to_dict(), sort_keys=True, indent=4))
+                first = False
 
     @gateway_required
     def copy(self, args):
