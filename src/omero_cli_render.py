@@ -33,7 +33,7 @@ from functools import wraps
 from omero.cli import BaseControl
 from omero.cli import CLI
 from omero.cli import ProxyStringType
-from omero.gateway import BlitzGateway
+from omero.gateway import (BlitzGateway, ColorHolder)
 from omero.model import Image
 from omero.model import Plate
 from omero.model import Screen
@@ -266,6 +266,57 @@ class ChannelObject(object):
         return d
 
 
+class RenderObjectNoEngine(object):
+
+    def __init__(self, image):
+        assert image
+        image.loadRenderOptions()
+        rdef = image._conn.getRenderingSettingsService() \
+            .getRenderingSettings(image.getPrimaryPixels().getId())
+        self.image = image
+        self.name = image.name or ''
+        self.type = image.getPixelsType()
+        self.range = image.getPixelRange()
+        self.model = str(rdef.getModel().value._val).lower()
+        self.projection = image.getProjection()
+        self.defaultZ = rdef.getDefaultZ()._val
+        self.defaultT = rdef.getDefaultT()._val
+
+        self.channels = [
+            ChannelObject(x) for x in image.getChannels(noRE=True)]
+        for i, ch in enumerate(self.channels):
+            cb = rdef.getChannelBinding(i)
+            ch.start = cb.getInputStart()._val
+            ch.end = cb.getInputEnd()._val
+            ch.color = ColorHolder.fromRGBA(cb.getRed()._val, cb.getGreen()._val,
+                                            cb.getBlue()._val, cb.getAlpha()._val)
+            ch.active = cb.getActive()._val
+
+
+    def __str__(self):
+        """Return a string representation of the render object"""
+        sb = "rdefv%s: model=%s, z=%s, t=%s\n" % (
+            SPEC_VERSION, self.model, self.defaultZ, self.defaultT)
+        for idx, ch in enumerate(self.channels):
+            sb += "ch%s: %s\n" % (idx, ch)
+        return sb
+
+    def to_dict(self):
+        """
+        Return a dict of fields that are recognised by `render set`
+        """
+        d = {}
+        chs = {}
+        for idx, ch in enumerate(self.channels, 1):
+            chs[idx] = ch.to_dict()
+        d['version'] = SPEC_VERSION
+        d['z'] = int(self.defaultZ+1)
+        d['t'] = int(self.defaultT+1)
+        d['channels'] = chs
+        d['greyscale'] = True if self.model == 'greyscale' else False
+        return d
+
+
 class RenderObject(object):
 
     def __init__(self, image):
@@ -492,7 +543,7 @@ class RenderControl(BaseControl):
         first = True
         for img in self.render_images(self.gateway, args.object, batch=1):
             try:
-                ro = RenderObject(img)
+                ro = RenderObjectNoEngine(img)
                 if args.style == 'plain':
                     self.ctx.out(str(ro))
                 elif args.style == 'yaml':
