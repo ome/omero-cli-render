@@ -85,7 +85,7 @@ SET_HELP = """Set rendering settings
 
     # where the input file (YAML or JSON) contains:
     # - a top-level channels key (required)
-    # - a version (2, recomended)
+    # - a version (recommended, current version: 2)
     # - an optional top-level greyscale key (True: greyscale,
     # False: color).
     # Channel elements are index:dictionaries of the form:
