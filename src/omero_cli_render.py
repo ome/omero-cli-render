@@ -83,9 +83,12 @@ SET_HELP = """Set rendering settings
     omero render set Image:1 settings.json
     omero render set Dataset:1 settings.yml
 
-    # where the input file (YAML or JSON) contains a top-level channels
-    # key (required), and an optional top-level greyscale key (True: greyscale,
-    # False: color). Channel elements are index:dictionaries of the form:
+    # where the input file (YAML or JSON) contains:
+    # - a top-level channels key (required)
+    # - a version (2, recomended)
+    # - an optional top-level greyscale key (True: greyscale,
+    # False: color).
+    # Channel elements are index:dictionaries of the form:
 
     channels:               Required
       <int>:                Channel index, 1-based
@@ -99,6 +102,7 @@ SET_HELP = """Set rendering settings
     greyscale: <bool>               Greyscale rendering, optional
     z: <int>                        Default Z plane index, 1-based, optional
     t: <int>                        Default T plane index, 1-based, optional
+    version: 2                      Version of the renderdef specification
 
     For example:
 
@@ -114,6 +118,7 @@ SET_HELP = """Set rendering settings
       ...
     z: 5
     t: 1
+    version: 2
 
     # Omitted fields will keep their current values.
     # Omitted channels will not be disabled unless --disable is used.
