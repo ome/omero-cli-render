@@ -141,8 +141,8 @@ TEST_HELP = """Test that underlying pixel data is available
     Image is assumed if <object>: is omitted
 
     Output:
-    <Status>: <Pixels ID> <Image ID> <Time (in sec) to load the thumbnail> \
-<Error details, if any>
+    <Status>: Pixels:<Pixels ID> Image:<Image ID> <Time (in sec) \
+     to load the thumbnail> <Error details, if any>
 
     Where status is either ok, miss, fill, cancel, or fail.
 
@@ -801,7 +801,8 @@ class RenderControl(BaseControl):
                 tb.close()
 
         stop = time.time()
-        self.ctx.out("%s %s %s %s %s" % (msg, pixid, img.id, stop-start, error))
+        self.ctx.out("%s Pixels:%s Image:%s %s %s" %
+                     (msg, pixid, img.id, stop-start, error))
         return msg
 
 
