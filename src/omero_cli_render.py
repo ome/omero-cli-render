@@ -141,7 +141,7 @@ TEST_HELP = """Test that underlying pixel data is available
     Image is assumed if <object>: is omitted
 
     Output:
-    <Status>: <Pixels ID> <Time (in sec) to load the thumbnail> \
+    <Status>: <Pixels ID> <Image ID> <Time (in sec) to load the thumbnail> \
 <Error details, if any>
 
     Where status is either ok, miss, fill, cancel, or fail.
@@ -752,10 +752,10 @@ class RenderControl(BaseControl):
         """ Implements the 'test' command """
         self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
         for img in self.render_images(self.gateway, args.object, batch=1):
-            self.test_per_pixel(
-                self.client, img.getPrimaryPixels().id, args.force, args.thumb)
+            self.test_per_image(
+                self.client, img, args.force, args.thumb)
 
-    def test_per_pixel(self, client, pixid, force, thumb):
+    def test_per_image(self, client, img, force, thumb):
         ctx = {'omero.group': '-1'}
         fail = {"omero.pixeldata.fail_if_missing": "true"}
         fail.update(ctx)
@@ -765,6 +765,8 @@ class RenderControl(BaseControl):
         start = time.time()
         error = ""
         rps = client.sf.createRawPixelsStore()
+
+        pixid = img.getPrimaryPixels().id
 
         try:
             rps.setPixelsId(long(pixid), False, fail)
@@ -799,7 +801,7 @@ class RenderControl(BaseControl):
                 tb.close()
 
         stop = time.time()
-        self.ctx.out("%s %s %s %s" % (msg, pixid, stop-start, error))
+        self.ctx.out("%s %s %s %s %s" % (msg, pixid, img.id, stop-start, error))
         return msg
 
 
