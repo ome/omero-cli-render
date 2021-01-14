@@ -98,8 +98,8 @@ SET_HELP = """Set rendering settings
         label: <string>     Channel name
         start: <float>      Start of rendering window, optional (needs end)
         end: <float>        End of rendering window, optional (needs start)
-        min: <float>        Minimum pixel value intensity, optional
-        max: <float>        Maximum pixel value intensity, optional
+        min: <float>        Min pixel intensity, optional (needs max if unset)
+        max: <float>        Max pixel intensity, optional (needs min if unset)
       <int>:
         ...
     greyscale: <bool>               Greyscale rendering, optional
