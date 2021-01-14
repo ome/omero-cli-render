@@ -214,6 +214,11 @@ class TestRender(CLITest):
         end = 'end' if version > 1 else 'max'
         assert channel.getWindowStart() == rdef.get(start, 0)
         assert channel.getWindowEnd() == rdef.get(end, 255)
+        if version > 1:
+            if rdef.get('min') is not None:
+                assert channel.getWindowMin() == rdef.get('min')
+            if rdef.get('max') is not None:
+                assert channel.getWindowMax() == rdef.get('max')
 
     def assert_image_rmodel(self, img, greyscale):
         assert img.isGreyscaleRenderingModel() == greyscale
@@ -288,6 +293,26 @@ class TestRender(CLITest):
         rdfile = tmpdir.join('render-test.json')
         rdfile.write(json.dumps(rd))
         self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
+
+    def test_set_minmax(self, tmpdir):
+        self.create_image()
+        rd = self.get_render_def(version=2)
+        # Need to set min AND max or neither (StatsInfo needs both)...
+        rd['channels'][1]['min'] = 50
+        rd['channels'][1]['max'] = 200
+        rd['channels'][2]['min'] = 0
+        rd['channels'][2]['max'] = 500
+        rdfile = tmpdir.join('render-test.json')
+        rdfile.write(json.dumps(rd))
+        self.args += ["set", self.idonly, str(rdfile)]
+        self.cli.invoke(self.args, strict=True)
+        self.assert_target_rdef(self.idonly, rd)
+        # But it is possible to update min OR max alone
+        rd = self.get_render_def(version=2)
+        rd['channels'][1]['min'] = 25
+        rdfile.write(json.dumps(rd))
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
 
