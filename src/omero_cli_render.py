@@ -98,8 +98,8 @@ SET_HELP = """Set rendering settings
         label: <string>     Channel name
         start: <float>      Start of rendering window, optional (needs end)
         end: <float>        End of rendering window, optional (needs start)
-        min: <float>        Min pixel intensity, optional (needs max if unset)
-        max: <float>        Max pixel intensity, optional (needs min if unset)
+        min: <float>        Minimum pixel intensity, optional (needs max)
+        max: <float>        Maximum pixel intensity, optional (needs min)
       <int>:
         ...
     greyscale: <bool>               Greyscale rendering, optional
@@ -126,9 +126,12 @@ SET_HELP = """Set rendering settings
     # Omitted fields will keep their current values.
     # Omitted channels will not be disabled unless --disable is used.
     # If the file specifies to turn off a channel (active: False) then the
-    # other settings like min, max, and color which might be specified for
+    # other settings like start, end, and color which might be specified for
     # that channel in the same file will be ignored, however the channel
     # name (label) is still taken into account.
+    # If min and max have not been set on the channel (no StatsInfo on the
+    # channel) then you must set both. If max and min already set, each can
+    # be updated individually.
 """
 
 TEST_HELP = """Test that underlying pixel data is available
