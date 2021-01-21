@@ -39,7 +39,8 @@ from omero.model import Plate
 from omero.model import Screen
 from omero.model import Dataset
 from omero.model import Project
-from omero.rtypes import rint
+from omero.model import StatsInfoI
+from omero.rtypes import rint, rdouble
 from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
@@ -97,6 +98,8 @@ SET_HELP = """Set rendering settings
         label: <string>     Channel name
         start: <float>      Start of rendering window, optional (needs end)
         end: <float>        End of rendering window, optional (needs start)
+        min: <float>        Minimum pixel intensity, optional (needs max)
+        max: <float>        Maximum pixel intensity, optional (needs min)
       <int>:
         ...
     greyscale: <bool>               Greyscale rendering, optional
@@ -123,9 +126,12 @@ SET_HELP = """Set rendering settings
     # Omitted fields will keep their current values.
     # Omitted channels will not be disabled unless --disable is used.
     # If the file specifies to turn off a channel (active: False) then the
-    # other settings like min, max, and color which might be specified for
+    # other settings like start, end, and color which might be specified for
     # that channel in the same file will be ignored, however the channel
     # name (label) is still taken into account.
+    # If min and max have not been set on the channel (no StatsInfo on the
+    # channel) then you must set both. If max and min already set, each can
+    # be updated individually.
 """
 
 TEST_HELP = """Test that underlying pixel data is available
@@ -642,6 +648,7 @@ class RenderControl(BaseControl):
         cindices = []
         rangelist = []
         colourlist = []
+        minmaxlist = []
         for (i, c) in newchannels.items():
             if c.label:
                 namedict[i] = c.label
@@ -651,15 +658,17 @@ class RenderControl(BaseControl):
                 cindices.append(i)
             rangelist.append([c.start, c.end])
             colourlist.append(c.color)
-        return (namedict, cindices, rangelist, colourlist)
+            minmaxlist.append([c.min, c.max])
+        rv = (namedict, cindices, rangelist, colourlist, minmaxlist)
+        return rv
 
     @gateway_required
     def set(self, args):
         """ Implements the 'set' command """
         data = self._load_rendering_settings(
             args.channels, session=self.client.getSession())
-        (namedict, cindices, rangelist, colourlist) = self._read_channels(
-            data)
+        (namedict, cindices, rangelist, colourlist, minmaxlist) = \
+            self._read_channels(data)
         greyscale = data.get('greyscale', None)
         if greyscale is not None:
             self.ctx.dbg('greyscale=%s' % greyscale)
@@ -695,6 +704,22 @@ class RenderControl(BaseControl):
             # Re-activate any un-listed channels
             if len(active_channels) > 0:
                 img.set_active_channels(active_channels)
+
+            # Set statsInfo min & max
+            for minmax, ch in zip(minmaxlist, img.getChannels(noRE=True)):
+                if minmax[0] is None and minmax[1] is None:
+                    continue
+                si = ch.getStatsInfo()
+                if si is None:
+                    si = StatsInfoI()
+                else:
+                    si = si._obj
+                if minmax[0] is not None:
+                    si.globalMin = rdouble(minmax[0])
+                if minmax[1] is not None:
+                    si.globalMax = rdouble(minmax[1])
+                ch._obj.statsInfo = si
+                ch.save()
 
             if def_z:
                 img.setDefaultZ(def_z - 1)
