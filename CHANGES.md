@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+0.7.0
+-----
+
+*   Add support for setting min/max rendering values [#53](https://github.com/ome/omero-cli-render/pull/53)
+
 0.6.2
 -----
 
