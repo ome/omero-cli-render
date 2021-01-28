@@ -45,6 +45,8 @@ from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
 
+from omero_render import validate_renderdef, validate_renderdef_batch
+
 HELP = "Tools for working with rendering settings"
 
 INFO_HELP = """Show details of a rendering setting
@@ -667,6 +669,8 @@ class RenderControl(BaseControl):
             self.ctx.dbg(e)
             self.ctx.die(103, "Could not read %s" % source)
 
+        validate_renderdef(data)
+
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % source)
 
@@ -773,6 +777,8 @@ class RenderControl(BaseControl):
         except Exception as e:
             self.ctx.dbg(e)
             self.ctx.die(103, "Could not read %s" % args.path)
+        validate_renderdef_batch(batch_data)
+
         for key, containers in batch_data.items():
             if key.startswith('_'):
                 continue

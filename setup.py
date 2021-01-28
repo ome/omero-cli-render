@@ -96,8 +96,9 @@ url = "https://github.com/ome/omero-cli-render/"
 
 setup(
     version=version,
-    packages=['', 'omero.plugins'],
+    packages=['', 'omero.plugins', 'omero_render'],
     package_dir={"": "src"},
+    include_package_data=True,
     name='omero-cli-render',
     description="Plugin for use in the OMERO CLI.",
     long_description=read('README.rst'),
@@ -120,6 +121,7 @@ setup(
     install_requires=[
         'PyYAML',
         'omero-py>=5.6.0',
+        'jsonschema',
         'future'
         ],
     python_requires='>=3',
