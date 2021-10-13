@@ -213,6 +213,10 @@ class ChannelObject(object):
         self.label = channel.getLabel()
         self.color = channel.getColor()
         self.lut = channel.getLut()
+        self.reverse = channel.isInverted()
+        self.family = channel.getFamily()._val
+        self.coeff = channel.getCoefficient()
+        self.noise = channel._re.getChannelNoiseReduction(channel._idx)
         try:
             self.min = channel.getWindowMin()
             self.max = channel.getWindowMax()
@@ -279,13 +283,19 @@ class ChannelObject(object):
             _set_if_not_none(d, 'end', self.end)
         else:
             if self.lut:
-                _set_if_not_none(d, 'color-type', "lut")
-                _set_if_not_none(d, 'color-format', "name")
+                _set_if_not_none(d, 'color_type', "lut")
+                _set_if_not_none(d, 'color_format', "name")
                 _set_if_not_none(d, 'color', self.lut.replace(".lut", ""))
             else:
-                _set_if_not_none(d, 'color-type', "rgb")
-                _set_if_not_none(d, 'color-format', "hex")
+                _set_if_not_none(d, 'color_type', "rgb")
+                _set_if_not_none(d, 'color_format', "hex")
                 _set_if_not_none(d, 'color', color)
+            d['noise_reduction'] = str(self.noise)
+            d['mapping'] = {
+                "family": self.family,
+                "reverse": str(self.reverse),
+                "coefficient": str(self.coeff)
+            }
             w = {}
             _set_if_not_none(w, 'min', self.min)
             _set_if_not_none(w, 'max', self.max)
@@ -349,20 +359,34 @@ class RenderObject(object):
         d = {}
         d['version'] = SPEC_VERSION
         chs = {}
+        chs_active = []
         idx_start = 1 if SPEC_VERSION <= 2 else 0
         for idx, ch in enumerate(self.channels, idx_start):
             chs[idx] = ch.to_dict()
+            if SPEC_VERSION > 2:
+                if chs[idx]['active']:
+                    chs_active.append(str(idx))
+                chs[idx].pop('active')
         d['channels'] = chs
         if SPEC_VERSION <= 2:
             d['z'] = int(self.defaultZ+1)
             d['t'] = int(self.defaultT+1)
             d['greyscale'] = True if self.model == 'greyscale' else False
         else:
-            d['color-model'] = self.model
+            d['color_model'] = self.model
             d['plane'] = "xy"
             d['dimensions'] = "zt"
-            d['default-dimension-0'] = int(self.defaultZ)
-            d['default-dimension-1'] = int(self.defaultT)
+            d['default_dimensions'] = {
+                "0" : int(self.defaultZ),
+                "1": int(self.defaultT)
+            }
+            d['group'] = {
+                "0": {
+                    "visible": "True",
+                    "type": "channel",
+                    "indexes": chs_active
+                }
+            }
         return d
 
 
