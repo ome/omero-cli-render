@@ -282,19 +282,21 @@ class ChannelObject(object):
             _set_if_not_none(d, 'start', self.start)
             _set_if_not_none(d, 'end', self.end)
         else:
+            color_def = {}
             if self.lut:
-                _set_if_not_none(d, 'color_type', "lut")
-                _set_if_not_none(d, 'color_format', "name")
-                _set_if_not_none(d, 'color', self.lut.replace(".lut", ""))
+                _set_if_not_none(color_def, 'type', "lut")
+                _set_if_not_none(color_def, 'format', "name")
+                _set_if_not_none(color_def, 'value', self.lut.replace(".lut", ""))
             else:
-                _set_if_not_none(d, 'color_type', "rgb")
-                _set_if_not_none(d, 'color_format', "hex")
-                _set_if_not_none(d, 'color', color)
+                _set_if_not_none(color_def, 'type', "rgb")
+                _set_if_not_none(color_def, 'format', "hex")
+                _set_if_not_none(color_def, 'value', color)
+            d['color'] = color_def
             d['noise_reduction'] = str(self.noise)
             d['mapping'] = {
                 "family": self.family,
                 "reverse": str(self.reverse),
-                "coefficient": str(self.coeff)
+                "coefficients": [str(self.coeff)]
             }
             w = {}
             _set_if_not_none(w, 'min', self.min)
@@ -375,16 +377,16 @@ class RenderObject(object):
         else:
             d['color_model'] = self.model
             d['plane'] = "xy"
-            d['dimensions'] = "zt"
-            d['default_dimensions'] = {
-                "0" : int(self.defaultZ),
-                "1": int(self.defaultT)
-            }
+            d['axes'] = "zt"
             d['group'] = {
                 "0": {
                     "visible": "True",
                     "type": "channel",
-                    "indexes": chs_active
+                    "indexes": chs_active,
+                    "default_axis" : {
+                        "0" : int(self.defaultZ),
+                        "1": int(self.defaultT)
+                    }
                 }
             }
         return d
