@@ -291,13 +291,12 @@ class ChannelObject(object):
                 _set_if_not_none(color_def, 'type', "rgb")
                 _set_if_not_none(color_def, 'format', "hex")
                 _set_if_not_none(color_def, 'value', color)
-            d['color'] = color_def
-            d['noise_reduction'] = str(self.noise)
-            d['mapping'] = {
-                "family": self.family,
-                "reverse": str(self.reverse),
-                "coefficients": [str(self.coeff)]
-            }
+            _set_if_not_none(d, 'label', label)
+            _set_if_not_none(d, 'color', color_def)
+            _set_if_not_none(d, 'noiseReduction', str(self.noise))
+            _set_if_not_none(d, 'family', str(self.family))
+            _set_if_not_none(d, 'reverse', str(self.reverse))
+            _set_if_not_none(d, 'coefficient', str(self.coeff))
             w = {}
             _set_if_not_none(w, 'min', self.min)
             _set_if_not_none(w, 'max', self.max)
@@ -375,17 +374,16 @@ class RenderObject(object):
             d['t'] = int(self.defaultT+1)
             d['greyscale'] = True if self.model == 'greyscale' else False
         else:
-            d['color_model'] = self.model
+            d['colorModel'] = self.model
             d['plane'] = "xy"
-            d['axes'] = "zt"
             d['group'] = {
                 "0": {
                     "visible": "True",
                     "type": "channel",
-                    "indexes": chs_active,
-                    "default_axis" : {
-                        "0" : int(self.defaultZ),
-                        "1": int(self.defaultT)
+                    "indices": chs_active,
+                    "defaultIndices" : {
+                        "z" : {"from": int(self.defaultZ), "to": int(self.defaultZ)},
+                        "t" : {"from": int(self.defaultT), "to": int(self.defaultT)},
                     }
                 }
             }
