@@ -55,6 +55,8 @@ INFO_HELP = """Show details of a rendering setting
 
     Examples:
     omero render info Image:123
+    omero render info Image:123 --style=json
+    omero render get Image:123  # equivalent to info --style=json
 """
 
 COPY_HELP = """Copy rendering setting to multiple objects
@@ -369,6 +371,7 @@ class RenderControl(BaseControl):
     def _configure(self, parser):
         parser.add_login_arguments()
         sub = parser.sub()
+        get = parser.add(sub, self.get, INFO_HELP)
         info = parser.add(sub, self.info, INFO_HELP)
         copy = parser.add(sub, self.copy, COPY_HELP)
         set_cmd = parser.add(sub, self.set, SET_HELP)
@@ -378,7 +381,7 @@ class RenderControl(BaseControl):
         render_type = ProxyStringType("Image")
         src_help = ("Rendering settings source")
 
-        for x in (info, copy, test):
+        for x in (get, info, copy, test):
             x.add_argument("object", type=render_type, help=src_help)
 
         tgt_help = ("Objects to apply the rendering settings to")
@@ -498,8 +501,17 @@ class RenderControl(BaseControl):
             self.ctx.die(111, "TBD: %s" % object.__class__.__name__)
 
     @gateway_required
+    def get(self, args):
+        """ Implements the 'get' command """
+        args.style = "json"
+        self.__info(args)
+
+    @gateway_required
     def info(self, args):
         """ Implements the 'info' command """
+        self.__info(args)
+
+    def __info(self, args):
         first = True
         for img in self.render_images(self.gateway, args.object, batch=1):
             try:
