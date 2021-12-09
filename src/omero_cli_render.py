@@ -399,6 +399,9 @@ class RenderControl(BaseControl):
         info.add_argument(
             "--style", choices=output_formats, default='plain',
             help="Output format")
+        get.add_argument(
+            "--style", choices=output_formats, default='json',
+            help="Output format")
 
         copy.add_argument("target", type=render_type, help=tgt_help,
                           nargs="+")
@@ -503,7 +506,6 @@ class RenderControl(BaseControl):
     @gateway_required
     def get(self, args):
         """ Implements the 'get' command """
-        args.style = "json"
         self.__info(args)
 
     @gateway_required
