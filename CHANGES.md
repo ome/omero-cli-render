@@ -1,6 +1,13 @@
 CHANGES
 =======
 
+0.8.0
+-----
+
+*   Add new ``omero render get`` command [#56](https://github.com/ome/omero-cli-render/pull/56)
+*   Also print image ID in ``omero test`` command [#51](https://github.com/ome/omero-cli-render/pull/51)
+
+
 0.7.0
 -----
 
