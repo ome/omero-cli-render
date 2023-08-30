@@ -19,6 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from __future__ import print_function
+
 from past.builtins import long
 from builtins import str
 from builtins import range
@@ -154,7 +155,7 @@ TEST_HELP = """Test that underlying pixel data is available
 
 # Current version for specifying rendering settings
 # in the yaml / json files
-SPEC_VERSION = 2
+SPEC_VERSION = 3
 
 
 def _set_if_not_none(dictionary, k, v):
@@ -213,6 +214,11 @@ class ChannelObject(object):
         self.emWave = channel.getEmissionWave()
         self.label = channel.getLabel()
         self.color = channel.getColor()
+        self.lut = channel.getLut()
+        self.reverse = channel.isInverted()
+        self.family = channel.getFamily()._val
+        self.coeff = channel.getCoefficient()
+        self.noise = channel._re.getChannelNoiseReduction(channel._idx)
         try:
             self.min = channel.getWindowMin()
             self.max = channel.getWindowMax()
@@ -270,12 +276,35 @@ class ChannelObject(object):
             label = str(self.label)
         d = {}
         _set_if_not_none(d, 'label', label)
-        _set_if_not_none(d, 'color', color)
-        _set_if_not_none(d, 'min', self.min)
-        _set_if_not_none(d, 'max', self.max)
-        _set_if_not_none(d, 'start', self.start)
-        _set_if_not_none(d, 'end', self.end)
         _set_if_not_none(d, 'active', self.active)
+        if SPEC_VERSION <= 2:
+            _set_if_not_none(d, 'color', color)
+            _set_if_not_none(d, 'min', self.min)
+            _set_if_not_none(d, 'max', self.max)
+            _set_if_not_none(d, 'start', self.start)
+            _set_if_not_none(d, 'end', self.end)
+        else:
+            color_def = {}
+            if self.lut:
+                _set_if_not_none(color_def, 'type', "lut")
+                _set_if_not_none(color_def, 'format', "name")
+                _set_if_not_none(color_def, 'value', self.lut.replace(".lut", ""))
+            else:
+                _set_if_not_none(color_def, 'type', "rgb")
+                _set_if_not_none(color_def, 'format', "hex")
+                _set_if_not_none(color_def, 'value', color)
+            _set_if_not_none(d, 'label', label)
+            _set_if_not_none(d, 'color', color_def)
+            _set_if_not_none(d, 'noiseReduction', str(self.noise))
+            _set_if_not_none(d, 'family', str(self.family))
+            _set_if_not_none(d, 'reverse', str(self.reverse))
+            _set_if_not_none(d, 'coefficient', str(self.coeff))
+            w = {}
+            _set_if_not_none(w, 'min', self.min)
+            _set_if_not_none(w, 'max', self.max)
+            _set_if_not_none(w, 'start', self.start)
+            _set_if_not_none(w, 'end', self.end)
+            d['window'] = w
         return d
 
 
@@ -331,14 +360,35 @@ class RenderObject(object):
         Return a dict of fields that are recognised by `render set`
         """
         d = {}
-        chs = {}
-        for idx, ch in enumerate(self.channels, 1):
-            chs[idx] = ch.to_dict()
         d['version'] = SPEC_VERSION
-        d['z'] = int(self.defaultZ+1)
-        d['t'] = int(self.defaultT+1)
+        chs = {}
+        chs_active = []
+        idx_start = 1 if SPEC_VERSION <= 2 else 0
+        for idx, ch in enumerate(self.channels, idx_start):
+            chs[idx] = ch.to_dict()
+            if SPEC_VERSION > 2:
+                if chs[idx]['active']:
+                    chs_active.append(str(idx))
+                chs[idx].pop('active')
         d['channels'] = chs
-        d['greyscale'] = True if self.model == 'greyscale' else False
+        if SPEC_VERSION <= 2:
+            d['z'] = int(self.defaultZ+1)
+            d['t'] = int(self.defaultT+1)
+            d['greyscale'] = True if self.model == 'greyscale' else False
+        else:
+            d['colorModel'] = self.model
+            d['plane'] = "xy"
+            d['group'] = {
+                "0": {
+                    "visible": "True",
+                    "type": "channel",
+                    "indices": chs_active,
+                    "defaultIndices" : {
+                        "z" : {"from": int(self.defaultZ), "to": int(self.defaultZ)},
+                        "t" : {"from": int(self.defaultT), "to": int(self.defaultT)},
+                    }
+                }
+            }
         return d
 
 
