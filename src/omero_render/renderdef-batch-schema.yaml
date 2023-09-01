@@ -1,0 +1,115 @@
+---
+
+$schema: https://json-schema.org/schema#
+$id: https://github.com/ome/omero-cli-render#renderdef-batch
+title: jsonschema for batch rendering configuration
+type: object
+additionalProperties: false
+# Top level objects beginning with _ will be ignored
+patternProperties:
+  "^_":
+      type:
+        object
+
+# Python jsonschema doesn't support $ref so use YAML anchors instead
+definitions:
+  channel: &channel
+    type: object
+    additionalProperties: false
+    properties:
+      active:
+        title: Active channel
+        type: boolean
+      color:
+        title: Channel color as HTML RGB triplet
+        type: string
+      label:
+        title: Channel name
+        type: string
+      start:
+        title: Start of rendering window, optional (needs end)
+        type: number
+      end:
+        title: End of rendering window, optional (needs start)
+        type: number
+      min:
+        title: Minimum pixel intensity, optional (needs max)
+        type: number
+      max:
+        title: Maximum pixel intensity, optional (needs min)
+        type: number
+
+  renderdef: &renderdef
+    type: object
+    additionalProperties: false
+    required:
+      - channels
+    properties:
+      channels:
+        title: Dictionary of channels
+        type: object
+        additionalProperties: false
+        patternProperties:
+          "^[0-9]+$":
+            title: Channel index, 1-based
+            type: object
+            properties: *channel
+              # $ref: "#/definitions/channel"
+      greyscale:
+        title: Greyscale rendering, optional
+        type: boolean
+      z:
+        title: Default Z plane index, 1-based, optional
+        type: integer
+      t:
+        title: Default T plane index, 1-based, optional
+        type: integer
+      version:
+        title: Version of the renderdef specification
+        type: integer
+
+  dataset: &dataset
+    type: object
+    additionalProperties: false
+    required:
+      - name
+      - renderdef
+    properties:
+      name:
+        title: Name of Dataset
+        type: string
+      renderdef: *renderdef
+        # $ref: "#/definitions/renderdef"
+
+  project: &project
+    type: object
+    additionalProperties: false
+    required:
+      - name
+    properties:
+      name:
+        title: Name of Project
+        type: string
+      datasets:
+        title: List of Datasets
+        type: array
+        minItems: 1
+        items: *dataset
+          # $ref: "#/definitions/dataset"
+      renderdef: *renderdef
+        # $ref: "#/definitions/renderdef"
+
+properties:
+  projects:
+    title: List of Projects
+    type: array
+    minItems: 1
+    items: *project
+      # $ref: "#/definitions/project"
+
+  datasets:
+    title: List of Datasets
+    type: array
+    minItems: 1
+    items: *dataset
+      # $ref: "#/definitions/dataset"

@@ -2,3 +2,4 @@ include *.txt
 include *.rst
 prune dist
 prune build
+include src/omero_render/*.yaml

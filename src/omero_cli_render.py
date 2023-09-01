@@ -45,6 +45,8 @@ from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
 
+from omero_render import validate_renderdef, validate_renderdef_batch
+
 HELP = "Tools for working with rendering settings"
 
 INFO_HELP = """Show details of a rendering setting
@@ -134,6 +136,51 @@ SET_HELP = """Set rendering settings
     # If min and max have not been set on the channel (no StatsInfo on the
     # channel) then you must set both. If max and min already set, each can
     # be updated individually.
+"""
+
+BATCHSET_HELP = """Set rendering settings from a hierachy of rendering
+    definitions corresponding to an OMERO container hierarchy.
+
+    'projects' and 'datasets' are supported as top level containers, 'name'
+    must be provided.
+    If multiple containers have the same name they will all be processed.
+    Top level keys beginning with '_' are ignored, so they could for example
+    be used as YAML anchors.
+
+    Definitions can be applied to projects, datasets, or datasets in projects.
+
+    'renderdef' is a rendering definition as passed to 'set', except that
+    'version' is omitted.
+
+    Example:
+
+    projects:
+      # Apply renderdef to all Images in Project A
+      - name: Project A
+        renderdef:
+          channels:
+            ...
+
+      # Apply renderdef to all Images in Dataset 1 in Project B
+      - name: Project B
+        datasets:
+          - name: Dataset 1
+            renderdef:
+              channels:
+                ...
+
+    datasets:
+      # Apply the channel_group1 renderdef anchor to all Images in Dataset 2
+      - name: Dataset 2
+        renderdef:
+          channels:
+            *channel_group1
+
+    _anchors: &channel_group1
+      1:
+        active: true
+        label: Plk1
+
 """
 
 TEST_HELP = """Test that underlying pixel data is available
@@ -375,6 +422,7 @@ class RenderControl(BaseControl):
         info = parser.add(sub, self.info, INFO_HELP)
         copy = parser.add(sub, self.copy, COPY_HELP)
         set_cmd = parser.add(sub, self.set, SET_HELP)
+        batchset = parser.add(sub, self.batchset, BATCHSET_HELP)
         edit = parser.add(sub, self.edit, EDIT_HELP)
         test = parser.add(sub, self.test, TEST_HELP)
 
@@ -389,7 +437,10 @@ class RenderControl(BaseControl):
             x.add_argument("object", type=render_type, help=tgt_help,
                            nargs="+")
 
-        for x in (copy, set_cmd, edit):
+        batchset.add_argument("path", help=(
+            "Directory containing subdirectories with renderdefs."))
+
+        for x in (copy, set_cmd, edit, batchset):
             x.add_argument(
                 "--skipthumbs", help="Do not regenerate thumbnails "
                                      "immediately", action="store_true")
@@ -406,13 +457,14 @@ class RenderControl(BaseControl):
         copy.add_argument("target", type=render_type, help=tgt_help,
                           nargs="+")
 
-        for x in (set_cmd, edit):
+        for x in (set_cmd, edit, batchset):
             x.add_argument(
                 "--disable", help="Disable non specified channels ",
                 action="store_true")
             x.add_argument(
                 "--ignore-errors", help="Do not error on mismatching"
                 " rendering settings", action="store_true")
+        for x in (set_cmd, edit):
             x.add_argument(
                 "channels",
                 help="Local file or OriginalFile:ID which specifies the "
@@ -435,6 +487,11 @@ class RenderControl(BaseControl):
         if not obj:
             self.ctx.die(110, "No such %s: %s" % (type, oid))
         return obj
+
+    def _lookup_name(self, gateway, type, name):
+        gateway.SERVICE_OPTS.setOmeroGroup('-1')
+        objs = gateway.getObjects(type, attributes={'name': name})
+        return list(objs)
 
     def render_images(self, gateway, object, batch=100):
         """
@@ -626,6 +683,8 @@ class RenderControl(BaseControl):
             self.ctx.dbg(e)
             self.ctx.die(103, "Could not read %s" % source)
 
+        validate_renderdef(data)
+
         if 'channels' not in data:
             self.ctx.die(104, "ERROR: No channels found in %s" % source)
 
@@ -681,6 +740,76 @@ class RenderControl(BaseControl):
         """ Implements the 'set' command """
         data = self._load_rendering_settings(
             args.channels, session=self.client.getSession())
+        self._set(data, args.object,
+                  args.ignore_errors, args.disable, args.skipthumbs)
+
+    def _get_batchset_targets(self, otype, descriptor):
+        """ Gets targets and renderdefs for the 'batchset' command """
+        def require_one(required, keys):
+            if sum((r in keys) for r in required) != 1:
+                raise ValueError(
+                    'Exactly one of {} required'.format(required))
+
+        descriptor_keys = list(descriptor.keys())
+
+        require_one(['name'], descriptor_keys)
+        if otype == 'Project':
+            require_one(['datasets', 'renderdef'], descriptor_keys)
+        else:
+            require_one(['renderdef'], descriptor_keys)
+
+        parents = self._lookup_name(self.gateway, otype, descriptor['name'])
+        if not parents:
+            raise Exception(f"No match for Project: {descriptor['name']}")
+        for parent in parents:
+            if 'renderdef' in descriptor_keys:
+                yield parent, descriptor['renderdef']
+            else:
+                dataset_renderdefs = dict(
+                    (d['name'], d) for d in descriptor['datasets'])
+                expected_names = set(dataset_renderdefs.keys())
+                for dataset in parent.listChildren():
+                    if dataset.name in dataset_renderdefs:
+                        for target in self._get_batchset_targets(
+                                'Dataset', dataset_renderdefs[dataset.name]):
+                            yield target
+                        try:
+                            expected_names.remove(dataset.name)
+                        except KeyError:
+                            # Multiple containers have the same name
+                            pass
+                if expected_names:
+                    raise Exception(
+                        'No match for datasets: {}'.format(expected_names))
+
+    @gateway_required
+    def batchset(self, args):
+        """ Implements the 'batchset' command """
+        try:
+            batch_data = pydict_text_io.load(
+                args.path, session=self.client.getSession())
+        except Exception as e:
+            self.ctx.dbg(e)
+            self.ctx.die(103, "Could not read %s" % args.path)
+        validate_renderdef_batch(batch_data)
+
+        for key, containers in batch_data.items():
+            if key.startswith('_'):
+                continue
+            if key not in {'projects', 'datasets'}:
+                raise NotImplementedError(
+                    'Invalid batchset container: {}'.format(key))
+            for container in containers:
+                for c, renderdef in self._get_batchset_targets(
+                        f'{key[0].upper()}{key[1:-1]}', container):
+                    self.ctx.out('Applying settings to '
+                                 f'{c.OMERO_CLASS}:{c.id} {c.name}')
+                    self._set(
+                        renderdef, c._obj,
+                        args.ignore_errors, args.disable, args.skipthumbs)
+
+    def _set(self, data, target, ignore_errors, disable, skipthumbs):
+        """ Utility method to apply rendering settings """
         (namedict, cindices, rangelist, colourlist, minmaxlist) = \
             self._read_channels(data)
         greyscale = data.get('greyscale', None)
@@ -688,14 +817,14 @@ class RenderControl(BaseControl):
             self.ctx.dbg('greyscale=%s' % greyscale)
 
         iids = []
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.render_images(self.gateway, target, batch=1):
             iids.append(img.id)
 
             (def_z, def_t) = self._read_default_planes(
-                img, data, ignore_errors=args.ignore_errors)
+                img, data, ignore_errors=ignore_errors)
 
             active_channels = []
-            if not args.disable:
+            if not disable:
                 # Calling set_active_channels will disable channels which
                 # are not specified.
                 # Need to reset ALL active channels after set_active_channels()
@@ -744,7 +873,7 @@ class RenderControl(BaseControl):
                 img.saveDefaults()
                 self.ctx.dbg(
                     "Updated rendering settings for Image:%s" % img.id)
-                if not args.skipthumbs:
+                if not skipthumbs:
                     self._generate_thumbs([img])
             except Exception as e:
                 self.ctx.err('ERROR: %s' % e)
@@ -753,7 +882,7 @@ class RenderControl(BaseControl):
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
-                         (args.object.__class__.__name__, args.object.id._val))
+                         (target.__class__.__name__, target.id._val))
 
         if namedict:
             self._update_channel_names(self.gateway, iids, namedict)
