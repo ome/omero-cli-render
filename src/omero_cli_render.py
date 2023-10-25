@@ -541,6 +541,19 @@ class RenderControl(BaseControl):
     def copy(self, args):
         """ Implements the 'copy' command """
         for src_img in self.get_images(self.gateway, args.object, batch=1):
+
+            # If target is a single Plate...
+            target = args.target
+            if isinstance(target, list) and len(target) == 1:
+                target = target[0]
+            if isinstance(target, Plate):
+                self.ctx.dbg("apply settings to Plate...")
+                self.gateway.applySettingsToSet(src_img.id, "Plate", [target.id.val])
+                if not args.skipthumbs:
+                    for imgs in self.get_images(self.gateway, args.target):
+                        self._generate_thumbs(imgs)
+                        return
+
             for targets in self.get_images(self.gateway, args.target):
                 batch = dict()
                 for target in targets:
