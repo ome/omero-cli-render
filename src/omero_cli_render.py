@@ -690,7 +690,16 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.render_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
+            self.set_image(img, data, cindices, rangelist, colourlist, greyscale, minmaxlist, args)
 
+        if not iids:
+            self.ctx.die(113, "ERROR: No images found for %s %d" %
+                         (args.object.__class__.__name__, args.object.id._val))
+
+        if namedict:
+            self._update_channel_names(self.gateway, iids, namedict)
+
+    def set_image(self, img, data, cindices, rangelist, colourlist, greyscale, minmaxlist, args):
             (def_z, def_t) = self._read_default_planes(
                 img, data, ignore_errors=args.ignore_errors)
 
@@ -750,13 +759,6 @@ class RenderControl(BaseControl):
                 self.ctx.err('ERROR: %s' % e)
             finally:
                 img._closeRE()
-
-        if not iids:
-            self.ctx.die(113, "ERROR: No images found for %s %d" %
-                         (args.object.__class__.__name__, args.object.id._val))
-
-        if namedict:
-            self._update_channel_names(self.gateway, iids, namedict)
 
     def edit(self, args):
         self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
