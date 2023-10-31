@@ -436,7 +436,7 @@ class RenderControl(BaseControl):
             self.ctx.die(110, "No such %s: %s" % (type, oid))
         return obj
 
-    def render_images(self, gateway, object, batch=100):
+    def get_images(self, gateway, object, batch=100):
         """
         Get the images.
 
@@ -451,12 +451,12 @@ class RenderControl(BaseControl):
 
         if isinstance(object, list):
             for x in object:
-                for rv in self.render_images(gateway, x, batch):
+                for rv in self.get_images(gateway, x, batch):
                     yield rv
         elif isinstance(object, Screen):
             scr = self._lookup(gateway, "Screen", object.id)
             for plate in scr.listChildren():
-                for rv in self.render_images(gateway, plate._obj, batch):
+                for rv in self.get_images(gateway, plate._obj, batch):
                     yield rv
         elif isinstance(object, Plate):
             plt = self._lookup(gateway, "Plate", object.id)
@@ -477,7 +477,7 @@ class RenderControl(BaseControl):
         elif isinstance(object, Project):
             prj = self._lookup(gateway, "Project", object.id)
             for ds in prj.listChildren():
-                for rv in self.render_images(gateway, ds._obj, batch):
+                for rv in self.get_images(gateway, ds._obj, batch):
                     yield rv
 
         elif isinstance(object, Dataset):
@@ -515,7 +515,7 @@ class RenderControl(BaseControl):
 
     def __info(self, args):
         first = True
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.get_images(self.gateway, args.object, batch=1):
             try:
                 ro = RenderObject(img)
                 if args.style == 'plain':
@@ -540,8 +540,21 @@ class RenderControl(BaseControl):
     @gateway_required
     def copy(self, args):
         """ Implements the 'copy' command """
-        for src_img in self.render_images(self.gateway, args.object, batch=1):
-            for targets in self.render_images(self.gateway, args.target):
+        for src_img in self.get_images(self.gateway, args.object, batch=1):
+
+            # If target is a single Plate...
+            target = args.target
+            if isinstance(target, list) and len(target) == 1:
+                target = target[0]
+            if isinstance(target, Plate):
+                self.ctx.dbg("apply settings to Plate...")
+                self.gateway.applySettingsToSet(src_img.id, "Plate", [target.id.val])
+                if not args.skipthumbs:
+                    for img in self.get_images(self.gateway, args.target, batch=1):
+                        self._generate_thumbs([img])
+                return
+
+            for targets in self.get_images(self.gateway, args.target):
                 batch = dict()
                 for target in targets:
                     if target.id == src_img.id:
@@ -566,7 +579,7 @@ class RenderControl(BaseControl):
                     self._generate_thumbs(list(batch.values()))
 
     def update_channel_names(self, gateway, obj, namedict):
-        for targets in self.render_images(gateway, obj):
+        for targets in self.get_images(gateway, obj):
             iids = [img.id for img in targets]
             self._update_channel_names(self, iids, namedict)
 
@@ -688,9 +701,18 @@ class RenderControl(BaseControl):
             self.ctx.dbg('greyscale=%s' % greyscale)
 
         iids = []
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.get_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
+            self.set_image(img, data, cindices, rangelist, colourlist, greyscale, minmaxlist, args)
 
+        if not iids:
+            self.ctx.die(113, "ERROR: No images found for %s %d" %
+                         (args.object.__class__.__name__, args.object.id._val))
+
+        if namedict:
+            self._update_channel_names(self.gateway, iids, namedict)
+
+    def set_image(self, img, data, cindices, rangelist, colourlist, greyscale, minmaxlist, args):
             (def_z, def_t) = self._read_default_planes(
                 img, data, ignore_errors=args.ignore_errors)
 
@@ -751,13 +773,6 @@ class RenderControl(BaseControl):
             finally:
                 img._closeRE()
 
-        if not iids:
-            self.ctx.die(113, "ERROR: No images found for %s %d" %
-                         (args.object.__class__.__name__, args.object.id._val))
-
-        if namedict:
-            self._update_channel_names(self.gateway, iids, namedict)
-
     def edit(self, args):
         self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
 
@@ -765,7 +780,7 @@ class RenderControl(BaseControl):
     def test(self, args):
         """ Implements the 'test' command """
         self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.get_images(self.gateway, args.object, batch=1):
             self.test_per_image(
                 self.client, img, args.force, args.thumb)
 
