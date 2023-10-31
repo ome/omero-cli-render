@@ -550,8 +550,8 @@ class RenderControl(BaseControl):
                 self.ctx.dbg("apply settings to Plate...")
                 self.gateway.applySettingsToSet(src_img.id, "Plate", [target.id.val])
                 if not args.skipthumbs:
-                    for imgs in self.get_images(self.gateway, args.target):
-                        self._generate_thumbs(imgs)
+                    for img in self.get_images(self.gateway, args.target, batch=1):
+                        self._generate_thumbs([img])
                 return
 
             for targets in self.get_images(self.gateway, args.target):
