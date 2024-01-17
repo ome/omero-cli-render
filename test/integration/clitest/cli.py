@@ -24,28 +24,8 @@ from builtins import object
 import pytest
 
 import omero
-from omero.cli import CLI
-from omero.plugins.sessions import SessionsControl
 from omero.rtypes import rstring
-
-from omero.testlib import ITest
-from mox3 import mox
-
-
-class AbstractCLITest(ITest):
-
-    @classmethod
-    def setup_class(cls):
-        super(AbstractCLITest, cls).setup_class()
-        cls.cli = CLI()
-        cls.cli.register("sessions", SessionsControl, "TEST")
-
-    def setup_mock(self):
-        self.mox = mox.Mox()
-
-    def teardown_mock(self):
-        self.mox.UnsetStubs()
-        self.mox.VerifyAll()
+from omero.testlib.cli import AbstractCLITest
 
 
 class CLITest(AbstractCLITest):
