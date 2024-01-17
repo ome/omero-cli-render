@@ -129,7 +129,7 @@ setup(
     keywords=['OMERO.CLI', 'plugin'],
     cmdclass={'test': PyTest},
     tests_require=[
-        'omero-py>=5.17.0',
+        'omero-py>=5.18.0',
         'pytest',
         'restview'],
 )
