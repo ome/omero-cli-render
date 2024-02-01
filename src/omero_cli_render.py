@@ -147,6 +147,36 @@ TEST_HELP = """Test that underlying pixel data is available
     omero render test Image:1
 """
 
+EXPORT_HELP = """Export rendering settings as yaml files
+
+Examples:
+    Export one yaml file for each Dataset in a Project (first image)
+    (into ./DATASET_NAME/IMAGE_NAME.yml):
+    omero export Project:1
+
+    Export one yaml file for each Image of a Dataset (into
+    ./DATASET_NAME/IMAGE_NAME.yml):
+    omero export --traverse Dataset:1
+"""
+
+IMPO_HELP = """Import rendering settings as yaml files
+
+Yaml files have to be in directories with the name of the dataset,
+i.e. ./DATASET_NAME/IMAGE_NAME.yml !
+
+If DATASET_NAME/IMAGE_NAME is not unique, the last imported
+dataset/image will be used.
+
+(channels argument has to be a yaml file for this command)
+
+Examples:
+    Set the rendering settings for one image:
+    omero import DATASET_NAME/IMAGE_NAME.yml
+
+    Set the rendering settings for the whole dataset:
+    omero import --dataset DATASET_NAME/IMAGE_NAME.yml
+"""
+
 # Current version for specifying rendering settings
 # in the yaml / json files
 SPEC_VERSION = 2
@@ -372,8 +402,8 @@ class RenderControl(BaseControl):
         set_cmd = parser.add(sub, self.set, SET_HELP)
         edit = parser.add(sub, self.edit, EDIT_HELP)
         test = parser.add(sub, self.test, TEST_HELP)
-        export = parser.add(sub, self.export, "Export rendering settings as yaml files")
-        impo = parser.add(sub, self.impo, "Import rendering settings from yaml files")
+        export = parser.add(sub, self.export, EXPORT_HELP)
+        impo = parser.add(sub, self.impo, IMPO_HELP)
 
         render_type = ProxyStringType("Image")
         src_help = ("Rendering settings source")
@@ -425,13 +455,16 @@ class RenderControl(BaseControl):
             help="If underlying pixel data available test thumbnail retrieval"
         )
 
-        export.add_argument("--sep", default="|", help="Separator character (default: |)")
-        export.add_argument("--traverse", action="store_true", help="Export settings for all images of a dataset (default: just first one)")
+        export.add_argument("--traverse", action="store_true",
+                            help="Export settings for all images of a "
+                                 "dataset (default: just first one)")
 
-        impo.add_argument("--sep", default="|", help="Separator character (default: |)")
-        impo.add_argument("--dataset", action="store_true", help="Rendering settings should be applied to the whole dataset")
-        impo.add_argument("--spw", action="store_true", help="If target is Screen/Plate/Well (NOT SUPPORTED YET)")
-
+        impo.add_argument("--dataset", action="store_true",
+                          help="Rendering settings should be applied to "
+                               "the whole dataset")
+        impo.add_argument("--spw", action="store_true",
+                          help="If target is Screen/Plate/Well "
+                               "(NOT SUPPORTED YET)")
 
     def _lookup(self, gateway, type, oid):
         # TODO: move _lookup to a _configure type
@@ -542,7 +575,6 @@ class RenderControl(BaseControl):
             finally:
                 img._closeRE()
 
-
     def _get_datasets_for_image(self, gateway, img_id):
         """
         Get all datasets an image is part of.
@@ -560,7 +592,6 @@ class RenderControl(BaseControl):
             datasets.append(link.parent)
         return datasets
 
-
     @gateway_required
     def impo(self, args):
         """Implements the impo(rt) command"""
@@ -573,7 +604,8 @@ class RenderControl(BaseControl):
             ds_query = "select d from Dataset d where d.name = :name"
             params = omero.sys.ParametersI()
             params.map['name'] = rstring(ds_name)
-            datasets = self.gateway.getQueryService().findAllByQuery(ds_query, params)
+            datasets = self.gateway.getQueryService().findAllByQuery(ds_query,
+                                                                     params)
             if not datasets:
                 self.ctx.err(f"No dataset with name {ds_name} found.")
                 return
@@ -592,18 +624,21 @@ class RenderControl(BaseControl):
             params = omero.sys.ParametersI()
             params.map['name1'] = rstring(ds_name)
             params.map['name2'] = rstring(img_name)
-            images = self.gateway.getQueryService().findAllByQuery(img_query, params)
+            images = self.gateway.getQueryService().findAllByQuery(img_query,
+                                                                   params)
             if not images:
-                self.ctx.err(f"No image with name {img_name} found within a dataset {ds_name}.")
+                self.ctx.err(f"No image with name {img_name} found "
+                             f"within a dataset {ds_name}.")
                 return
             elif len(images) > 1:
-                self.ctx.dbg("More than one images found, using latest one.")
-                target_img = max(images, key=lambda img: img.getId().getValue())
+                self.ctx.dbg("More than one images found, "
+                             "using latest one.")
+                target_img = max(images,
+                                 key=lambda img: img.getId().getValue())
             else:
                 target_img = images[0]
             set_args.object = target_img
             self.set(set_args)
-
 
     def __do_export(self, ds, img):
         """
@@ -629,7 +664,6 @@ class RenderControl(BaseControl):
         finally:
             img._closeRE()
 
-
     @gateway_required
     def export(self, args):
         """Implements the export command"""
@@ -651,9 +685,11 @@ class RenderControl(BaseControl):
 
         elif isinstance(args.object, Image):
             img = self._lookup(self.gateway, "Image", args.object.id)
-            ds = self._get_datasets_for_image(self.gateway, args.object.id.getValue())
+            ds = self._get_datasets_for_image(self.gateway,
+                                              args.object.id.getValue())
             if len(ds) > 1:
-                self.ctx.out("Warning, more than one dataset found, using latest one")
+                self.ctx.out("Warning, more than one dataset found, using "
+                             "latest one")
                 res = max(ds, key=lambda d: d.getId().getValue())
             else:
                 res = ds[0]
@@ -661,8 +697,8 @@ class RenderControl(BaseControl):
             self.__do_export(res, img)
 
         else:
-            self.ctx.err(f"{args.object.__class__.__name__} not supported yet ")
-
+            self.ctx.err(f"{args.object.__class__.__name__} not supported "
+                         f"yet")
 
     @gateway_required
     def copy(self, args):
