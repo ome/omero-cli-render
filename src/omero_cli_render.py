@@ -25,6 +25,8 @@ import yaml
 
 from functools import wraps
 
+from pathlib import Path
+
 from omero.cli import BaseControl
 from omero.cli import CLI
 from omero.cli import ProxyStringType
@@ -562,10 +564,9 @@ class RenderControl(BaseControl):
     @gateway_required
     def impo(self, args):
         """Implements the impo(rt) command"""
-        filename = args.channels
-        filename = filename.replace(".yml", "")
-        ds_name = filename.split(args.sep)[0]
-        img_name = filename.split(args.sep)[1]
+        yml_path = Path(args.channels)
+        ds_name = yml_path.parent.name
+        img_name = yml_path.name.replace(".yml", "")
 
         set_args = args
         if args.dataset:
@@ -604,7 +605,7 @@ class RenderControl(BaseControl):
             self.set(set_args)
 
 
-    def __do_export(self, ds, img, sep):
+    def __do_export(self, ds, img):
         """
         Exports the rendering settings of an image to a file
         called <IMAGE_NAME><SEPARATOR><DATASET_NAME>.yml
@@ -615,8 +616,10 @@ class RenderControl(BaseControl):
         """
         try:
             ro = RenderObject(img)
-            name = f"{ds.getName()}{sep}{img.getName()}.yml"
-            with open(name, "w") as out:
+            target_dir = Path(ds.getName())
+            target_dir.mkdir(exist_ok=True)
+            target = target_dir / Path(f"{img.getName()}.yml")
+            with target.open(mode="w", encoding="utf-8") as out:
                 out.write(yaml.dump(ro.to_dict(),
                                     explicit_start=True,
                                     width=80, indent=4,
@@ -635,14 +638,14 @@ class RenderControl(BaseControl):
             for ds in prj.listChildren():
                 ds = self._lookup(self.gateway, "Dataset", ds.id)
                 for img in ds.listChildren():
-                    self.__do_export(ds, img, args.sep)
+                    self.__do_export(ds, img)
                     if not args.traverse:
                         break
 
         elif isinstance(args.object, Dataset):
             ds = self._lookup(self.gateway, "Dataset", args.object.id)
             for img in ds.listChildren():
-                self.__do_export(ds, img, args.sep)
+                self.__do_export(ds, img)
                 if not args.traverse:
                     break
 
@@ -655,7 +658,7 @@ class RenderControl(BaseControl):
             else:
                 res = ds[0]
             res = DatasetWrapper(conn=self.gateway, obj=res)
-            self.__do_export(res, img, args.sep)
+            self.__do_export(res, img)
 
         else:
             self.ctx.err(f"{args.object.__class__.__name__} not supported yet ")
