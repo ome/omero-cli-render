@@ -19,10 +19,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from __future__ import division
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import json
 import pytest
 
@@ -205,7 +201,7 @@ class TestRender(CLITest):
                 assert img.getDefaultZ() == rdef.get('z') - 1
             else:
                 # If not set, default Z plane is the middle one
-                assert img.getDefaultZ() == (int)(old_div(img.getSizeZ(), 2))
+                assert img.getDefaultZ() == (int)(img.getSizeZ() // 2)
 
     def assert_channel_rdef(self, channel, rdef, version=2):
         assert channel.getLabel() == rdef['label']
