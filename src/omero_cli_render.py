@@ -809,8 +809,16 @@ class RenderControl(BaseControl):
         elif thumb:
             tb = client.sf.createThumbnailStore()
             try:
-                tb.setPixelsId(int(pixid), ctx)
-                tb.getThumbnailByLongestSide(rint(96), ctx)
+                has_rendering_settings = tb.setPixelsId(int(pixid), ctx)
+                if not has_rendering_settings:
+                    try:
+                        tb.resetDefaults(ctx)
+                        tb.getThumbnailByLongestSide(rint(96), ctx)
+                    except Exception as e:
+                        msg = "fail:"
+                        error = e
+                else:
+                    tb.getThumbnailByLongestSide(rint(96), ctx)
             finally:
                 tb.close()
 
