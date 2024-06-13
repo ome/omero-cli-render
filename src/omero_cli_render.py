@@ -350,6 +350,26 @@ def gateway_required(func):
     """
     @wraps(func)
     def _wrapper(self, *args, **kwargs):
+        cliargs = args[0]
+        if cliargs.user is None and cliargs.password is None:
+            # try to get token from omero_user_token
+            try:
+                from omero_user_token import getter
+                token = getter()
+                key, hostport = token.split('@')
+                host, port = hostport.split(':')
+                cliargs.key = key
+                if cliargs.server:
+                    assert cliargs.server == host
+                else:
+                    cliargs.server = host
+                if cliargs.port:
+                    assert cliargs.port == port
+                else:
+                    cliargs.port == port
+            except ImportError:
+                pass
+
         self.client = self.ctx.conn(*args)
         self.gateway = BlitzGateway(client_obj=self.client)
 
