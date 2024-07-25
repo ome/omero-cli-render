@@ -420,7 +420,8 @@ class TestRender(CLITest):
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
 
-    def test_thumb_nordef(self):
+    def test_thumb_no_renderingdef(self):
+        """Test thumbnail generation when the Image has no RenderingDef"""
         self.create_image()
         self.delete_args += [
             "Image/Thumbnail:" + self.idonly,
