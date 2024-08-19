@@ -802,10 +802,20 @@ class RenderControl(BaseControl):
         if error:
             error = str(error).split("\n")[0]
         elif thumb:
+            ctx = {'omero.group': str(img.details.group.id.val)}
             tb = client.sf.createThumbnailStore()
             try:
-                tb.setPixelsId(int(pixid), ctx)
-                tb.getThumbnailByLongestSide(rint(96), ctx)
+                has_rendering_settings = tb.setPixelsId(int(pixid), ctx)
+                if not has_rendering_settings:
+                    try:
+                        tb.resetDefaults(ctx)
+                        tb.setPixelsId(int(pixid), ctx)
+                        tb.getThumbnailByLongestSide(rint(96), ctx)
+                    except Exception as e:
+                        msg = "fail:"
+                        error = e
+                else:
+                    tb.getThumbnailByLongestSide(rint(96), ctx)
             finally:
                 tb.close()
 

@@ -24,6 +24,7 @@ import pytest
 
 from omero_cli_render import RenderControl
 from omero.cli import NonZeroReturnCode
+from omero.plugins.delete import DeleteControl
 from cli import CLITest
 from omero.gateway import BlitzGateway
 import os.path
@@ -39,6 +40,8 @@ class TestRender(CLITest):
     def setup_method(self, method):
         super(TestRender, self).setup_method(method)
         self.cli.register("render", RenderControl, "TEST")
+        self.cli.register("delete", DeleteControl, "TEST")
+        self.delete_args = self.args + ["delete"]
         self.args += ["render"]
         self.idonly = "-1"
         self.imageid = "Image:-1"
@@ -412,3 +415,13 @@ class TestRender(CLITest):
         self.args += ["set", self.idonly, str(rdfile)]
         self.cli.invoke(self.args, strict=True)
         self.assert_target_rdef(self.idonly, rd)
+
+    def test_thumb_no_renderingdef(self):
+        """Test thumbnail generation when the Image has no RenderingDef"""
+        self.create_image()
+        self.delete_args += [
+            "Image/Thumbnail:" + self.idonly,
+            "Image/RenderingDef:" + self.idonly]
+        self.cli.invoke(self.delete_args, strict=True)
+        self.args += ["test", "--thumb", self.idonly]
+        self.cli.invoke(self.args, strict=True)
