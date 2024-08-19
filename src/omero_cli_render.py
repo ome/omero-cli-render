@@ -18,11 +18,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from __future__ import print_function
-from past.builtins import long
-from builtins import str
-from builtins import range
-from builtins import object
 import sys
 import time
 import json
@@ -783,7 +778,7 @@ class RenderControl(BaseControl):
         pixid = img.getPrimaryPixels().id
 
         try:
-            rps.setPixelsId(long(pixid), False, fail)
+            rps.setPixelsId(int(pixid), False, fail)
             msg = "ok:"
         except Exception as e:
             error = e
@@ -793,7 +788,7 @@ class RenderControl(BaseControl):
             rps.close()
         else:
             try:
-                rps.setPixelsId(long(pixid), False, make)
+                rps.setPixelsId(int(pixid), False, make)
                 msg = "fill:"
             except KeyboardInterrupt:
                 msg = "cancel:"

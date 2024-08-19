@@ -59,9 +59,8 @@ setup(
     install_requires=[
         'PyYAML',
         'omero-py>=5.6.0',
-        'future'
         ],
-    python_requires='>=3',
+    python_requires='>=3.8',
     url='%s' % url,
     zip_safe=False,
     download_url='%s/v%s.tar.gz' % (url, version),
