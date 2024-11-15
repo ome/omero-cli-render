@@ -123,7 +123,7 @@ SET_HELP = """Set rendering settings
     # Omitted fields will keep their current values.
     # Omitted channels will not be disabled unless --disable is used.
     # All specified settings are applied to the given channel, whether or not 
-    # active is set and its value.
+    # the active parameter is set and independently of its value.
     # If min and max have not been set on the channel (no StatsInfo on the
     # channel) then you must set both. If max and min already set, each can
     # be updated individually.
