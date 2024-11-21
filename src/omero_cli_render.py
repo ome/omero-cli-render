@@ -122,10 +122,8 @@ SET_HELP = """Set rendering settings
 
     # Omitted fields will keep their current values.
     # Omitted channels will not be disabled unless --disable is used.
-    # If the file specifies to turn off a channel (active: False) then the
-    # other settings like start, end, and color which might be specified for
-    # that channel in the same file will be ignored, however the channel
-    # name (label) is still taken into account.
+    # All specified settings are applied to the given channel, whether or not
+    # the active parameter is set and independently of its value.
     # If min and max have not been set on the channel (no StatsInfo on the
     # channel) then you must set both. If max and min already set, each can
     # be updated individually.
