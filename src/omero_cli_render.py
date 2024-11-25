@@ -22,6 +22,7 @@ import sys
 import time
 import json
 import yaml
+import omero
 
 from functools import wraps
 
