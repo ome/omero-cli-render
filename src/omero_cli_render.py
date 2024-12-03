@@ -150,6 +150,8 @@ TEST_HELP = """Test that underlying pixel data is available
 
 EXPORT_HELP = """Export rendering settings as yaml files
 
+Note: Does not for Screen/Plate yet!
+
 Examples:
     Export one yaml file for each Dataset in a Project (first image)
     (into ./DATASET_NAME/IMAGE_NAME.yml):
@@ -161,6 +163,8 @@ Examples:
 """
 
 IMPO_HELP = """Import rendering settings as yaml files
+
+Note: Does not for Screen/Plate yet!
 
 Yaml files have to be in directories with the name of the dataset,
 i.e. ./DATASET_NAME/IMAGE_NAME.yml !
