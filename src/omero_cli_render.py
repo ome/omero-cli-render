@@ -716,9 +716,11 @@ class RenderControl(BaseControl):
                 target = target[0]
             if isinstance(target, Plate):
                 self.ctx.dbg("apply settings to Plate...")
-                self.gateway.applySettingsToSet(src_img.id, "Plate", [target.id.val])
+                self.gateway.applySettingsToSet(src_img.id,
+                                                "Plate", [target.id.val])
                 if not args.skipthumbs:
-                    for img in self.get_images(self.gateway, args.target, batch=1):
+                    for img in self.get_images(self.gateway,
+                                               args.target, batch=1):
                         self._generate_thumbs([img])
                 return
 
@@ -871,7 +873,8 @@ class RenderControl(BaseControl):
         iids = []
         for img in self.get_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
-            self.set_image(img, data, cindices, rangelist, colourlist, greyscale, minmaxlist, args)
+            self.set_image_settings(img, data, cindices, rangelist,
+                                    colourlist, greyscale, minmaxlist, args)
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
@@ -880,66 +883,67 @@ class RenderControl(BaseControl):
         if namedict:
             self._update_channel_names(self.gateway, iids, namedict)
 
-    def set_image(self, img, data, cindices, rangelist, colourlist, greyscale, minmaxlist, args):
-            (def_z, def_t) = self._read_default_planes(
-                img, data, ignore_errors=args.ignore_errors)
+    def set_image_settings(self, img, data, cindices, rangelist,
+                           colourlist, greyscale, minmaxlist, args):
+        (def_z, def_t) = self._read_default_planes(
+            img, data, ignore_errors=args.ignore_errors)
 
-            active_channels = []
-            if not args.disable:
-                # Calling set_active_channels will disable channels which
-                # are not specified.
-                # Need to reset ALL active channels after set_active_channels()
-                imgchannels = img.getChannels()
-                for ci, ch in enumerate(imgchannels, 1):
-                    if (-ci not in cindices and ch.isActive()) \
-                            or ci in cindices:
-                        active_channels.append(ci)
+        active_channels = []
+        if not args.disable:
+            # Calling set_active_channels will disable channels which
+            # are not specified.
+            # Need to reset ALL active channels after set_active_channels()
+            imgchannels = img.getChannels()
+            for ci, ch in enumerate(imgchannels, 1):
+                if (-ci not in cindices and ch.isActive()) \
+                        or ci in cindices:
+                    active_channels.append(ci)
 
-            img.set_active_channels(
-                cindices, windows=rangelist, colors=colourlist,
-                set_inactive=True)
+        img.set_active_channels(
+            cindices, windows=rangelist, colors=colourlist,
+            set_inactive=True)
 
-            if greyscale is not None:
-                if greyscale:
-                    img.setGreyscaleRenderingModel()
-                else:
-                    img.setColorRenderingModel()
+        if greyscale is not None:
+            if greyscale:
+                img.setGreyscaleRenderingModel()
+            else:
+                img.setColorRenderingModel()
 
-            # Re-activate any un-listed channels
-            if len(active_channels) > 0:
-                img.set_active_channels(active_channels)
+        # Re-activate any un-listed channels
+        if len(active_channels) > 0:
+            img.set_active_channels(active_channels)
 
-            # Set statsInfo min & max
-            for minmax, ch in zip(minmaxlist, img.getChannels(noRE=True)):
-                if minmax[0] is None and minmax[1] is None:
-                    continue
-                si = ch.getStatsInfo()
-                if si is None:
-                    si = StatsInfoI()
-                else:
-                    si = si._obj
-                if minmax[0] is not None:
-                    si.globalMin = rdouble(minmax[0])
-                if minmax[1] is not None:
-                    si.globalMax = rdouble(minmax[1])
-                ch._obj.statsInfo = si
-                ch.save()
+        # Set statsInfo min & max
+        for minmax, ch in zip(minmaxlist, img.getChannels(noRE=True)):
+            if minmax[0] is None and minmax[1] is None:
+                continue
+            si = ch.getStatsInfo()
+            if si is None:
+                si = StatsInfoI()
+            else:
+                si = si._obj
+            if minmax[0] is not None:
+                si.globalMin = rdouble(minmax[0])
+            if minmax[1] is not None:
+                si.globalMax = rdouble(minmax[1])
+            ch._obj.statsInfo = si
+            ch.save()
 
-            if def_z:
-                img.setDefaultZ(def_z - 1)
-            if def_t:
-                img.setDefaultT(def_t - 1)
+        if def_z:
+            img.setDefaultZ(def_z - 1)
+        if def_t:
+            img.setDefaultT(def_t - 1)
 
-            try:
-                img.saveDefaults()
-                self.ctx.dbg(
-                    "Updated rendering settings for Image:%s" % img.id)
-                if not args.skipthumbs:
-                    self._generate_thumbs([img])
-            except Exception as e:
-                self.ctx.err('ERROR: %s' % e)
-            finally:
-                img._closeRE()
+        try:
+            img.saveDefaults()
+            self.ctx.dbg(
+                "Updated rendering settings for Image:%s" % img.id)
+            if not args.skipthumbs:
+                self._generate_thumbs([img])
+        except Exception as e:
+            self.ctx.err('ERROR: %s' % e)
+        finally:
+            img._closeRE()
 
     def edit(self, args):
         self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
