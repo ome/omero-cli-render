@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+0.8.1
+-----
+
+*   Fix thumbnail generation with missing rendering definition [#64](https://github.com/ome/omero-cli-render/pull/64)
+*   Remove future dependency [#63](https://github.com/ome/omero-cli-render/pull/63)
+*   Remove mox3 dependency [#60](https://github.com/ome/omero-cli-render/pull/60)
+*   Remove custom PyTest command [#61](https://github.com/ome/omero-cli-render/pull/61)
+*   Update GitHub actions [#57](https://github.com/ome/omero-cli-render/pull/57)
+
 0.8.0
 -----
 

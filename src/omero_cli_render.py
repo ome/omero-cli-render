@@ -18,29 +18,27 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from __future__ import print_function
-from past.builtins import long
-from builtins import str
-from builtins import range
-from builtins import object
 import sys
 import time
 import json
 import yaml
+import omero
 
 from functools import wraps
+
+from pathlib import Path
 
 from omero.cli import BaseControl
 from omero.cli import CLI
 from omero.cli import ProxyStringType
-from omero.gateway import BlitzGateway
+from omero.gateway import BlitzGateway, DatasetWrapper
 from omero.model import Image
 from omero.model import Plate
 from omero.model import Screen
 from omero.model import Dataset
 from omero.model import Project
 from omero.model import StatsInfoI
-from omero.rtypes import rint, rdouble
+from omero.rtypes import rint, rdouble, rstring, rlong
 from omero.util import pydict_text_io
 
 from omero import UnloadedEntityException
@@ -127,10 +125,8 @@ SET_HELP = """Set rendering settings
 
     # Omitted fields will keep their current values.
     # Omitted channels will not be disabled unless --disable is used.
-    # If the file specifies to turn off a channel (active: False) then the
-    # other settings like start, end, and color which might be specified for
-    # that channel in the same file will be ignored, however the channel
-    # name (label) is still taken into account.
+    # All specified settings are applied to the given channel, whether or not
+    # the active parameter is set and independently of its value.
     # If min and max have not been set on the channel (no StatsInfo on the
     # channel) then you must set both. If max and min already set, each can
     # be updated individually.
@@ -150,6 +146,40 @@ TEST_HELP = """Test that underlying pixel data is available
 
     Examples:
     omero render test Image:1
+"""
+
+EXPORT_HELP = """Export rendering settings as yaml files
+
+Note: Does not for Screen/Plate yet!
+
+Examples:
+    Export one yaml file for each Dataset in a Project (first image)
+    (into ./DATASET_NAME/IMAGE_NAME.yml):
+    omero export Project:1
+
+    Export one yaml file for each Image of a Dataset (into
+    ./DATASET_NAME/IMAGE_NAME.yml):
+    omero export --traverse Dataset:1
+"""
+
+IMPO_HELP = """Import rendering settings as yaml files
+
+Note: Does not for Screen/Plate yet!
+
+Yaml files have to be in directories with the name of the dataset,
+i.e. ./DATASET_NAME/IMAGE_NAME.yml !
+
+If DATASET_NAME/IMAGE_NAME is not unique, the last imported
+dataset/image will be used.
+
+(channels argument has to be a yaml file for this command)
+
+Examples:
+    Set the rendering settings for one image:
+    omero import DATASET_NAME/IMAGE_NAME.yml
+
+    Set the rendering settings for the whole dataset:
+    omero import --dataset DATASET_NAME/IMAGE_NAME.yml
 """
 
 # Current version for specifying rendering settings
@@ -377,11 +407,13 @@ class RenderControl(BaseControl):
         set_cmd = parser.add(sub, self.set, SET_HELP)
         edit = parser.add(sub, self.edit, EDIT_HELP)
         test = parser.add(sub, self.test, TEST_HELP)
+        export = parser.add(sub, self.export, EXPORT_HELP)
+        impo = parser.add(sub, self.impo, IMPO_HELP)
 
         render_type = ProxyStringType("Image")
         src_help = ("Rendering settings source")
 
-        for x in (get, info, copy, test):
+        for x in (get, info, copy, test, export):
             x.add_argument("object", type=render_type, help=src_help)
 
         tgt_help = ("Objects to apply the rendering settings to")
@@ -389,7 +421,7 @@ class RenderControl(BaseControl):
             x.add_argument("object", type=render_type, help=tgt_help,
                            nargs="+")
 
-        for x in (copy, set_cmd, edit):
+        for x in (copy, set_cmd, edit, impo):
             x.add_argument(
                 "--skipthumbs", help="Do not regenerate thumbnails "
                                      "immediately", action="store_true")
@@ -406,7 +438,7 @@ class RenderControl(BaseControl):
         copy.add_argument("target", type=render_type, help=tgt_help,
                           nargs="+")
 
-        for x in (set_cmd, edit):
+        for x in (set_cmd, edit, impo):
             x.add_argument(
                 "--disable", help="Disable non specified channels ",
                 action="store_true")
@@ -427,6 +459,17 @@ class RenderControl(BaseControl):
             "--thumb", action="store_true",
             help="If underlying pixel data available test thumbnail retrieval"
         )
+
+        export.add_argument("--traverse", action="store_true",
+                            help="Export settings for all images of a "
+                                 "dataset (default: just first one)")
+
+        impo.add_argument("--dataset", action="store_true",
+                          help="Rendering settings should be applied to "
+                               "the whole dataset")
+        impo.add_argument("--spw", action="store_true",
+                          help="If target is Screen/Plate/Well "
+                               "(NOT SUPPORTED YET)")
 
     def _lookup(self, gateway, type, oid):
         # TODO: move _lookup to a _configure type
@@ -536,6 +579,131 @@ class RenderControl(BaseControl):
                 self.ctx.err('ERROR: %s' % e)
             finally:
                 img._closeRE()
+
+    def _get_datasets_for_image(self, gateway, img_id):
+        """
+        Get all datasets an image is part of.
+        :param gateway: Ref to gateway
+        :param img: The image
+        :return: The datasets
+        """
+        query = "select i from Image i join fetch i.datasetLinks idl " \
+                "join fetch idl.parent d where i.id = :id"
+        params = omero.sys.ParametersI()
+        params.map['id'] = rlong(img_id)
+        img = gateway.getQueryService().findByQuery(query, params)
+        datasets = []
+        for link in img.iterateDatasetLinks():
+            datasets.append(link.parent)
+        return datasets
+
+    @gateway_required
+    def impo(self, args):
+        """Implements the impo(rt) command"""
+        yml_path = Path(args.channels)
+        ds_name = yml_path.parent.name
+        img_name = yml_path.name.replace(".yml", "")
+
+        set_args = args
+        if args.dataset:
+            ds_query = "select d from Dataset d where d.name = :name"
+            params = omero.sys.ParametersI()
+            params.map['name'] = rstring(ds_name)
+            datasets = self.gateway.getQueryService().findAllByQuery(ds_query,
+                                                                     params)
+            if not datasets:
+                self.ctx.err(f"No dataset with name {ds_name} found.")
+                return
+            elif len(datasets) > 1:
+                self.ctx.dbg("More than one dataset found, using latest one")
+                target_ds = max(datasets, key=lambda ds: ds.getId().getValue())
+            else:
+                target_ds = datasets[0]
+            set_args.object = target_ds
+            self.set(set_args)
+        else:
+            img_query = "select c from DatasetImageLink l " \
+                        "join l.child as c " \
+                        "join l.parent as p " \
+                        "where p.name = :name1 and c.name = :name2"
+            params = omero.sys.ParametersI()
+            params.map['name1'] = rstring(ds_name)
+            params.map['name2'] = rstring(img_name)
+            images = self.gateway.getQueryService().findAllByQuery(img_query,
+                                                                   params)
+            if not images:
+                self.ctx.err(f"No image with name {img_name} found "
+                             f"within a dataset {ds_name}.")
+                return
+            elif len(images) > 1:
+                self.ctx.dbg("More than one images found, "
+                             "using latest one.")
+                target_img = max(images,
+                                 key=lambda img: img.getId().getValue())
+            else:
+                target_img = images[0]
+            set_args.object = target_img
+            self.set(set_args)
+
+    def __do_export(self, ds, img):
+        """
+        Exports the rendering settings of an image to a file
+        called <IMAGE_NAME><SEPARATOR><DATASET_NAME>.yml
+        :param ds: The dataset
+        :param img: The image
+        :param sep: The separator
+        :return: None
+        """
+        try:
+            ro = RenderObject(img)
+            target_dir = Path(ds.getName())
+            target_dir.mkdir(exist_ok=True)
+            target = target_dir / Path(f"{img.getName()}.yml")
+            with target.open(mode="w", encoding="utf-8") as out:
+                out.write(yaml.dump(ro.to_dict(),
+                                    explicit_start=True,
+                                    width=80, indent=4,
+                                    default_flow_style=False).rstrip())
+        except Exception as e:
+            self.ctx.err('ERROR: %s' % e)
+        finally:
+            img._closeRE()
+
+    @gateway_required
+    def export(self, args):
+        """Implements the export command"""
+        if isinstance(args.object, Project):
+            prj = self._lookup(self.gateway, "Project", args.object.id)
+            for ds in prj.listChildren():
+                ds = self._lookup(self.gateway, "Dataset", ds.id)
+                for img in ds.listChildren():
+                    self.__do_export(ds, img)
+                    if not args.traverse:
+                        break
+
+        elif isinstance(args.object, Dataset):
+            ds = self._lookup(self.gateway, "Dataset", args.object.id)
+            for img in ds.listChildren():
+                self.__do_export(ds, img)
+                if not args.traverse:
+                    break
+
+        elif isinstance(args.object, Image):
+            img = self._lookup(self.gateway, "Image", args.object.id)
+            ds = self._get_datasets_for_image(self.gateway,
+                                              args.object.id.getValue())
+            if len(ds) > 1:
+                self.ctx.out("Warning, more than one dataset found, using "
+                             "latest one")
+                res = max(ds, key=lambda d: d.getId().getValue())
+            else:
+                res = ds[0]
+            res = DatasetWrapper(conn=self.gateway, obj=res)
+            self.__do_export(res, img)
+
+        else:
+            self.ctx.err(f"{args.object.__class__.__name__} not supported "
+                         f"yet")
 
     @gateway_required
     def copy(self, args):
@@ -798,7 +966,7 @@ class RenderControl(BaseControl):
         pixid = img.getPrimaryPixels().id
 
         try:
-            rps.setPixelsId(long(pixid), False, fail)
+            rps.setPixelsId(int(pixid), False, fail)
             msg = "ok:"
         except Exception as e:
             error = e
@@ -808,7 +976,7 @@ class RenderControl(BaseControl):
             rps.close()
         else:
             try:
-                rps.setPixelsId(long(pixid), False, make)
+                rps.setPixelsId(int(pixid), False, make)
                 msg = "fill:"
             except KeyboardInterrupt:
                 msg = "cancel:"
@@ -822,10 +990,20 @@ class RenderControl(BaseControl):
         if error:
             error = str(error).split("\n")[0]
         elif thumb:
+            ctx = {'omero.group': str(img.details.group.id.val)}
             tb = client.sf.createThumbnailStore()
             try:
-                tb.setPixelsId(int(pixid), ctx)
-                tb.getThumbnailByLongestSide(rint(96), ctx)
+                has_rendering_settings = tb.setPixelsId(int(pixid), ctx)
+                if not has_rendering_settings:
+                    try:
+                        tb.resetDefaults(ctx)
+                        tb.setPixelsId(int(pixid), ctx)
+                        tb.getThumbnailByLongestSide(rint(96), ctx)
+                    except Exception as e:
+                        msg = "fail:"
+                        error = e
+                else:
+                    tb.getThumbnailByLongestSide(rint(96), ctx)
             finally:
                 tb.close()
 
