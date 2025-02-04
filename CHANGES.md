@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+0.8.2
+-----
+
+*   Fix help text for impo/export commands [#69](https://github.com/ome/omero-cli-render/pull/69)
+*   Update actions and Update PyPI publish workflow to use build instead of sdist [#68](https://github.com/ome/omero-cli-render/pull/68)
+*   Update help with respect to disabled channels [#67](https://github.com/ome/omero-cli-render/pull/67)
+*   Add export and impo(rt) commands [#62](https://github.com/ome/omero-cli-render/pull/62)
+*   Fix issue with applying rendering settings of an image to a plate [#59](https://github.com/ome/omero-cli-render/pull/59)
+
 0.8.1
 -----
 
