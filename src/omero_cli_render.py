@@ -150,21 +150,21 @@ TEST_HELP = """Test that underlying pixel data is available
 
 EXPORT_HELP = """Export rendering settings as yaml files
 
-Note: Does not for Screen/Plate yet!
+Note: Does not work for Screen/Plate yet!
 
 Examples:
     Export one yaml file for each Dataset in a Project (first image)
     (into ./DATASET_NAME/IMAGE_NAME.yml):
-    omero export Project:1
+    omero render export Project:1
 
     Export one yaml file for each Image of a Dataset (into
     ./DATASET_NAME/IMAGE_NAME.yml):
-    omero export --traverse Dataset:1
+    omero render export --traverse Dataset:1
 """
 
 IMPO_HELP = """Import rendering settings as yaml files
 
-Note: Does not for Screen/Plate yet!
+Note: Does not work for Screen/Plate yet!
 
 Yaml files have to be in directories with the name of the dataset,
 i.e. ./DATASET_NAME/IMAGE_NAME.yml !
@@ -172,14 +172,12 @@ i.e. ./DATASET_NAME/IMAGE_NAME.yml !
 If DATASET_NAME/IMAGE_NAME is not unique, the last imported
 dataset/image will be used.
 
-(channels argument has to be a yaml file for this command)
-
 Examples:
     Set the rendering settings for one image:
-    omero import DATASET_NAME/IMAGE_NAME.yml
+    omero render import DATASET_NAME/IMAGE_NAME.yml
 
     Set the rendering settings for the whole dataset:
-    omero import --dataset DATASET_NAME/IMAGE_NAME.yml
+    omero render import --dataset DATASET_NAME/IMAGE_NAME.yml
 """
 
 # Current version for specifying rendering settings
