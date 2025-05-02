@@ -460,6 +460,11 @@ class RenderControl(BaseControl):
             help="If underlying pixel data available test thumbnail retrieval"
         )
 
+        for x in (export, impo):
+            x.add_argument("--slash", default='||',
+                           help="Replace '/' in image name with the "
+                                "specified characters (optional, default: ||)")
+
         export.add_argument("--traverse", action="store_true",
                             help="Export settings for all images of a "
                                  "dataset (default: just first one)")
@@ -603,6 +608,7 @@ class RenderControl(BaseControl):
         yml_path = Path(args.channels)
         ds_name = yml_path.parent.name
         img_name = yml_path.name.replace(".yml", "")
+        img_name = img_name.replace(args.slash, "/")
 
         set_args = args
         if args.dataset:
@@ -645,20 +651,21 @@ class RenderControl(BaseControl):
             set_args.object = target_img
             self.set(set_args)
 
-    def __do_export(self, ds, img):
+    def __do_export(self, ds, img, slash):
         """
         Exports the rendering settings of an image to a file
-        called <IMAGE_NAME><SEPARATOR><DATASET_NAME>.yml
+        called <DATASET_NAME>/<IMAGE_NAME>.yml
         :param ds: The dataset
         :param img: The image
-        :param sep: The separator
+        :param slash: String which is used to escape '/' in image name
         :return: None
         """
         try:
             ro = RenderObject(img)
             target_dir = Path(ds.getName())
             target_dir.mkdir(exist_ok=True)
-            target = target_dir / Path(f"{img.getName()}.yml")
+            img_name = img.getName().replace("/", slash)
+            target = target_dir / Path(f"{img_name}.yml")
             with target.open(mode="w", encoding="utf-8") as out:
                 out.write(yaml.dump(ro.to_dict(),
                                     explicit_start=True,
@@ -677,14 +684,14 @@ class RenderControl(BaseControl):
             for ds in prj.listChildren():
                 ds = self._lookup(self.gateway, "Dataset", ds.id)
                 for img in ds.listChildren():
-                    self.__do_export(ds, img)
+                    self.__do_export(ds, img, args.slash)
                     if not args.traverse:
                         break
 
         elif isinstance(args.object, Dataset):
             ds = self._lookup(self.gateway, "Dataset", args.object.id)
             for img in ds.listChildren():
-                self.__do_export(ds, img)
+                self.__do_export(ds, img, args.slash)
                 if not args.traverse:
                     break
 
@@ -699,7 +706,7 @@ class RenderControl(BaseControl):
             else:
                 res = ds[0]
             res = DatasetWrapper(conn=self.gateway, obj=res)
-            self.__do_export(res, img)
+            self.__do_export(res, img, args.slash)
 
         else:
             self.ctx.err(f"{args.object.__class__.__name__} not supported "
