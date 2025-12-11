@@ -485,7 +485,7 @@ class RenderControl(BaseControl):
         DEPRECATED: Use `get_images` instead. This will be removed in a future release.
         """
         warnings.warn(
-            "RenderControl.get_images is deprecated and will be removed in a future release; "
+            "RenderControl.render_images is deprecated and will be removed in a future release; "
             "use `get_images` instead.",
             DeprecationWarning
         )
