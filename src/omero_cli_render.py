@@ -830,13 +830,14 @@ class RenderControl(BaseControl):
                 self.ctx.err('ERROR: %s' % e)
                 self.ctx.die(
                     105, "Invalid channel description: %s" % chdict)
-
+        sorted_channels = dict(sorted(newchannels.items(),
+                                      key=lambda item: item[0]))
         namedict = {}
         cindices = []
         rangelist = []
         colourlist = []
         minmaxlist = []
-        for (i, c) in newchannels.items():
+        for (i, c) in sorted_channels.items():
             if c.label:
                 namedict[i] = c.label
             if c.active is False:
