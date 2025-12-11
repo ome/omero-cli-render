@@ -897,7 +897,7 @@ class RenderControl(BaseControl):
             self._update_channel_names(self.gateway, iids, namedict)
 
     def set_image_settings(self, img, data, cindices, rangelist,
-                           colourlist, greyscale, minmaxlist, args):
+                           colorlist, greyscale, minmaxlist, args):
         (def_z, def_t) = self._read_default_planes(
             img, data, ignore_errors=args.ignore_errors)
 
@@ -913,7 +913,7 @@ class RenderControl(BaseControl):
                     active_channels.append(ci)
 
         img.set_active_channels(
-            cindices, windows=rangelist, colors=colourlist,
+            cindices, windows=rangelist, colors=colorlist,
             set_inactive=True)
 
         if greyscale is not None:
