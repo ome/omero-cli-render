@@ -482,11 +482,12 @@ class RenderControl(BaseControl):
 
     def render_images(self, gateway, object, batch=100):
         """
-        DEPRECATED: Use `get_images` instead. This will be removed in a future release.
+        DEPRECATED: Use `get_images` instead.
+        This will be removed in a future release.
         """
         warnings.warn(
-            "RenderControl.render_images is deprecated and will be removed in a future release; "
-            "use `get_images` instead.",
+            "RenderControl.render_images is deprecated and will be "
+            "removed in a future release; use `get_images` instead.",
             DeprecationWarning
         )
         return self.get_images(gateway, object, batch)
