@@ -23,6 +23,7 @@ import time
 import json
 import yaml
 import omero
+import warnings
 
 from functools import wraps
 
@@ -478,6 +479,17 @@ class RenderControl(BaseControl):
         if not obj:
             self.ctx.die(110, "No such %s: %s" % (type, oid))
         return obj
+
+    def render_images(self, gateway, object, batch=100):
+        """
+        DEPRECATED: Use `get_images` instead. This will be removed in a future release.
+        """
+        warnings.warn(
+            "RenderControl.get_images is deprecated and will be removed in a future release; "
+            "use `get_images` instead.",
+            DeprecationWarning
+        )
+        return self.get_images(gateway, object, batch)
 
     def get_images(self, gateway, object, batch=100):
         """
