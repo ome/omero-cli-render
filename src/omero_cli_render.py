@@ -23,6 +23,7 @@ import time
 import json
 import yaml
 import omero
+import warnings
 
 from functools import wraps
 
@@ -484,6 +485,18 @@ class RenderControl(BaseControl):
 
     def render_images(self, gateway, object, batch=100):
         """
+        DEPRECATED: Use `get_images` instead.
+        This will be removed in a future release.
+        """
+        warnings.warn(
+            "RenderControl.render_images is deprecated and will be "
+            "removed in a future release; use `get_images` instead.",
+            DeprecationWarning
+        )
+        return self.get_images(gateway, object, batch)
+
+    def get_images(self, gateway, object, batch=100):
+        """
         Get the images.
 
         Parameters:
@@ -497,12 +510,12 @@ class RenderControl(BaseControl):
 
         if isinstance(object, list):
             for x in object:
-                for rv in self.render_images(gateway, x, batch):
+                for rv in self.get_images(gateway, x, batch):
                     yield rv
         elif isinstance(object, Screen):
             scr = self._lookup(gateway, "Screen", object.id)
             for plate in scr.listChildren():
-                for rv in self.render_images(gateway, plate._obj, batch):
+                for rv in self.get_images(gateway, plate._obj, batch):
                     yield rv
         elif isinstance(object, Plate):
             plt = self._lookup(gateway, "Plate", object.id)
@@ -523,7 +536,7 @@ class RenderControl(BaseControl):
         elif isinstance(object, Project):
             prj = self._lookup(gateway, "Project", object.id)
             for ds in prj.listChildren():
-                for rv in self.render_images(gateway, ds._obj, batch):
+                for rv in self.get_images(gateway, ds._obj, batch):
                     yield rv
 
         elif isinstance(object, Dataset):
@@ -561,7 +574,7 @@ class RenderControl(BaseControl):
 
     def __info(self, args):
         first = True
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.get_images(self.gateway, args.object, batch=1):
             try:
                 ro = RenderObject(img)
                 if args.style == 'plain':
@@ -713,8 +726,23 @@ class RenderControl(BaseControl):
     @gateway_required
     def copy(self, args):
         """ Implements the 'copy' command """
-        for src_img in self.render_images(self.gateway, args.object, batch=1):
-            for targets in self.render_images(self.gateway, args.target):
+        for src_img in self.get_images(self.gateway, args.object, batch=1):
+
+            # If target is a single Plate...
+            target = args.target
+            if isinstance(target, list) and len(target) == 1:
+                target = target[0]
+            if isinstance(target, Plate):
+                self.ctx.dbg("apply settings to Plate...")
+                self.gateway.applySettingsToSet(src_img.id,
+                                                "Plate", [target.id.val])
+                if not args.skipthumbs:
+                    for img in self.get_images(self.gateway,
+                                               args.target, batch=1):
+                        self._generate_thumbs([img])
+                return
+
+            for targets in self.get_images(self.gateway, args.target):
                 batch = dict()
                 for target in targets:
                     if target.id == src_img.id:
@@ -739,7 +767,7 @@ class RenderControl(BaseControl):
                     self._generate_thumbs(list(batch.values()))
 
     def update_channel_names(self, gateway, obj, namedict):
-        for targets in self.render_images(gateway, obj):
+        for targets in self.get_images(gateway, obj):
             iids = [img.id for img in targets]
             self._update_channel_names(self, iids, namedict)
 
@@ -862,68 +890,10 @@ class RenderControl(BaseControl):
             self.ctx.dbg('greyscale=%s' % greyscale)
 
         iids = []
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.get_images(self.gateway, args.object, batch=1):
             iids.append(img.id)
-
-            (def_z, def_t) = self._read_default_planes(
-                img, data, ignore_errors=args.ignore_errors)
-
-            active_channels = []
-            if not args.disable:
-                # Calling set_active_channels will disable channels which
-                # are not specified.
-                # Need to reset ALL active channels after set_active_channels()
-                imgchannels = img.getChannels()
-                for ci, ch in enumerate(imgchannels, 1):
-                    if (-ci not in cindices and ch.isActive()) \
-                            or ci in cindices:
-                        active_channels.append(ci)
-
-            img.set_active_channels(
-                cindices, windows=rangelist, colors=colourlist,
-                set_inactive=True)
-
-            if greyscale is not None:
-                if greyscale:
-                    img.setGreyscaleRenderingModel()
-                else:
-                    img.setColorRenderingModel()
-
-            # Re-activate any un-listed channels
-            if len(active_channels) > 0:
-                img.set_active_channels(active_channels)
-
-            # Set statsInfo min & max
-            for minmax, ch in zip(minmaxlist, img.getChannels(noRE=True)):
-                if minmax[0] is None and minmax[1] is None:
-                    continue
-                si = ch.getStatsInfo()
-                if si is None:
-                    si = StatsInfoI()
-                else:
-                    si = si._obj
-                if minmax[0] is not None:
-                    si.globalMin = rdouble(minmax[0])
-                if minmax[1] is not None:
-                    si.globalMax = rdouble(minmax[1])
-                ch._obj.statsInfo = si
-                ch.save()
-
-            if def_z:
-                img.setDefaultZ(def_z - 1)
-            if def_t:
-                img.setDefaultT(def_t - 1)
-
-            try:
-                img.saveDefaults()
-                self.ctx.dbg(
-                    "Updated rendering settings for Image:%s" % img.id)
-                if not args.skipthumbs:
-                    self._generate_thumbs([img])
-            except Exception as e:
-                self.ctx.err('ERROR: %s' % e)
-            finally:
-                img._closeRE()
+            self.set_image_settings(img, data, cindices, rangelist,
+                                    colourlist, greyscale, minmaxlist, args)
 
         if not iids:
             self.ctx.die(113, "ERROR: No images found for %s %d" %
@@ -932,6 +902,68 @@ class RenderControl(BaseControl):
         if namedict:
             self._update_channel_names(self.gateway, iids, namedict)
 
+    def set_image_settings(self, img, data, cindices, rangelist,
+                           colorlist, greyscale, minmaxlist, args):
+        (def_z, def_t) = self._read_default_planes(
+            img, data, ignore_errors=args.ignore_errors)
+
+        active_channels = []
+        if not args.disable:
+            # Calling set_active_channels will disable channels which
+            # are not specified.
+            # Need to reset ALL active channels after set_active_channels()
+            imgchannels = img.getChannels()
+            for ci, ch in enumerate(imgchannels, 1):
+                if (-ci not in cindices and ch.isActive()) \
+                        or ci in cindices:
+                    active_channels.append(ci)
+
+        img.set_active_channels(
+            cindices, windows=rangelist, colors=colorlist,
+            set_inactive=True)
+
+        if greyscale is not None:
+            if greyscale:
+                img.setGreyscaleRenderingModel()
+            else:
+                img.setColorRenderingModel()
+
+        # Re-activate any un-listed channels
+        if len(active_channels) > 0:
+            img.set_active_channels(active_channels)
+
+        # Set statsInfo min & max
+        for minmax, ch in zip(minmaxlist, img.getChannels(noRE=True)):
+            if minmax[0] is None and minmax[1] is None:
+                continue
+            si = ch.getStatsInfo()
+            if si is None:
+                si = StatsInfoI()
+            else:
+                si = si._obj
+            if minmax[0] is not None:
+                si.globalMin = rdouble(minmax[0])
+            if minmax[1] is not None:
+                si.globalMax = rdouble(minmax[1])
+            ch._obj.statsInfo = si
+            ch.save()
+
+        if def_z:
+            img.setDefaultZ(def_z - 1)
+        if def_t:
+            img.setDefaultT(def_t - 1)
+
+        try:
+            img.saveDefaults()
+            self.ctx.dbg(
+                "Updated rendering settings for Image:%s" % img.id)
+            if not args.skipthumbs:
+                self._generate_thumbs([img])
+        except Exception as e:
+            self.ctx.err('ERROR: %s' % e)
+        finally:
+            img._closeRE()
+
     def edit(self, args):
         self.ctx.die(112, "ERROR: 'edit' command has been renamed to 'set'")
 
@@ -939,7 +971,7 @@ class RenderControl(BaseControl):
     def test(self, args):
         """ Implements the 'test' command """
         self.gateway.SERVICE_OPTS.setOmeroGroup('-1')
-        for img in self.render_images(self.gateway, args.object, batch=1):
+        for img in self.get_images(self.gateway, args.object, batch=1):
             self.test_per_image(
                 self.client, img, args.force, args.thumb)
 
